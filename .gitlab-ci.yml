@@ -22,7 +22,7 @@ build-job:       # This job runs in the build stage, which runs first.
 test-job:
   stage: test
   services:
-    - docker:dind
+    - docker:dind-rootless
   script:
     - gradle cleanTest test
   artifacts:
