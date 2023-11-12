@@ -21,6 +21,7 @@ build-job:       # This job runs in the build stage, which runs first.
 
 test-job:
   stage: test
+  dependencies: []
   tags:
     - docker-privileged
   services:
@@ -37,8 +38,8 @@ test-job:
     - gradle cleanTest test
   artifacts:
     when: always
-#    paths:
-#      - "build/test-results/test/TEST-*.xml"
+    paths:
+      - "build/test-results/test/TEST-*.xml"
     reports:
       junit: build/test-results/test/TEST-*.xml
 
