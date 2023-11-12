@@ -15,9 +15,7 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Testcontainers
 import xyz.jordanplayz158.ptd1.server.controller.SWFController
-import xyz.jordanplayz158.ptd1.server.orm.Achievement
 import xyz.jordanplayz158.ptd1.server.orm.Pokemon
-import xyz.jordanplayz158.ptd1.server.orm.Save
 import xyz.jordanplayz158.ptd1.server.orm.User
 import java.io.File
 import java.util.Locale
@@ -31,9 +29,24 @@ import kotlin.test.assertTrue
 @Testcontainers
 class MigrationTest {
     companion object {
-        private const val DATABASE = "test"
-        private const val USERNAME = "test"
-        private const val PASSWORD = "test"
+        private var TESTCONTAINERS = true
+        private var DATABASE = "test"
+        private var USERNAME = "test"
+        private var PASSWORD = "test"
+
+        init {
+            val usesTestContainers = System.getenv("USES_TESTCONTAINERS")
+            if(usesTestContainers !== null) TESTCONTAINERS = usesTestContainers.toBoolean()
+
+            val db = System.getenv("DATABASE_DB")
+            if(db !== null) DATABASE = db
+
+            val username = System.getenv("DATABASE_USER")
+            if(username !== null) USERNAME = username
+
+            val password = System.getenv("DATABASE_PASS")
+            if(password !== null) PASSWORD = password
+        }
     }
 
 
@@ -63,7 +76,7 @@ class MigrationTest {
             .withUsername(USERNAME)
             .withPassword(PASSWORD)
 
-        mariaDbContainer.start()
+        if(TESTCONTAINERS) mariaDbContainer.start()
 
         val config = HikariConfig()
         config.jdbcUrl = mariaDbContainer.getJdbcUrl()
@@ -95,7 +108,7 @@ class MigrationTest {
                 ))
             }
 
-        mySqlContainer.start()
+        if(TESTCONTAINERS) mySqlContainer.start()
 
         // Using Hikari because Flyway can't seem to
         //   figure out how to handle them otherwise
@@ -122,7 +135,7 @@ class MigrationTest {
             .withUsername(USERNAME)
             .withPassword(PASSWORD)
 
-        postgreSqlContainer.start()
+        if(TESTCONTAINERS) postgreSqlContainer.start()
 
         val config = HikariConfig()
         config.jdbcUrl = postgreSqlContainer.getJdbcUrl()

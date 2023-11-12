@@ -22,18 +22,15 @@ build-job:       # This job runs in the build stage, which runs first.
 test-job:
   stage: test
   dependencies: []
-  tags:
-    - docker-privileged
   services:
-    - name: docker:dind
-      command: ["--tls=false"]
+    - name: mariadb:11
+    - name: mysql:8.0-debian
+    - name: postgres:16
   variables:
-    # Instruct Testcontainers to use the daemon of DinD, use port 2375 for non-tls connections.
-    DOCKER_HOST: "tcp://docker:2375"
-    # Instruct Docker not to start over TLS.
-    DOCKER_TLS_CERTDIR: ""
-    # Improve performance with overlayfs.
-    DOCKER_DRIVER: overlay2
+    USES_TESTCONTAINERS: true
+    DATABASE_DB: test
+    DATABASE_USER: test
+    DATABASE_PASS: test
   script:
     - gradle cleanTest test
   artifacts:
