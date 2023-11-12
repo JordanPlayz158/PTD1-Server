@@ -17,11 +17,9 @@ plugins {
     id("io.ktor.plugin") version "2.3.4"
 }
 
-var tag: String? = System.getenv("CI_COMMIT_TAG")
-val isRelease = tag !== null
-
-if(tag === null) {
-    tag = ByteArrayOutputStream().use { outputStream ->
+var tagEnv: String? = System.getenv("CI_COMMIT_TAG")
+val tag = if(tagEnv === null) {
+    ByteArrayOutputStream().use { outputStream ->
         try {
             project.exec {
                 executable("git")
@@ -33,12 +31,17 @@ if(tag === null) {
             ""
         }
     }
+} else {
+    "$tagEnv"
 }
 
-var commit: String? = "-${System.getenv("CI_COMMIT_SHORT_SHA")}"
 
-if(commit === null) {
-    commit = if(tag!!.isNotEmpty()) "-" else "" + ByteArrayOutputStream().use { outputStream ->
+
+val isRelease = tagEnv !== null
+
+var commitEnv: String? = System.getenv("CI_COMMIT_SHORT_SHA")
+val commit = if(commitEnv === null) {
+    if(tag.isNotEmpty()) "-" else "" + ByteArrayOutputStream().use { outputStream ->
         project.exec {
             executable("git")
             args("rev-parse", "--short", "HEAD")
@@ -46,10 +49,14 @@ if(commit === null) {
         }
         outputStream.toString()
     }
+} else {
+    "-$commitEnv"
 }
 
+
+
 group = "xyz.jordanplayz158"
-version = "$tag${if(!isRelease) "$commit" else ""}"
+version = "$tag${if(!isRelease) commit else ""}"
 
 repositories {
     mavenCentral()
