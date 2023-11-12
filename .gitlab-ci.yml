@@ -29,20 +29,20 @@ test-job:
     - name: mariadb:11
       variables:
         MARIADB_RANDOM_ROOT_PASSWORD: yes
-        MARIADB_DATABASE: "$DATABASE_DB"
-        MARIADB_USER: "$DATABASE_USER"
-        MARIADB_PASSWORD: "$DATABASE_PASS"
+        MARIADB_DATABASE: $DATABASE_DB
+        MARIADB_USER: $DATABASE_USER
+        MARIADB_PASSWORD: $DATABASE_PASS
     - name: mysql:8.0-debian
       variables:
         MYSQL_RANDOM_ROOT_PASSWORD: yes
-        MYSQL_DATABASE: "$DATABASE_DB"
-        MYSQL_USER: "$DATABASE_USER"
-        MYSQL_PASSWORD: "$DATABASE_PASS"
+        MYSQL_DATABASE: $DATABASE_DB
+        MYSQL_USER: $DATABASE_USER
+        MYSQL_PASSWORD: $DATABASE_PASS
     - name: postgres:16
       variables:
-        POSTGRES_DB: "$DATABASE_DB"
-        POSTGRES_USER: "$DATABASE_USER"
-        POSTGRES_PASSWORD: "$DATABASE_PASS"
+        POSTGRES_DB: $DATABASE_DB
+        POSTGRES_USER: $DATABASE_USER
+        POSTGRES_PASSWORD: $DATABASE_PASS
   script:
     - gradle cleanTest test
   artifacts:
