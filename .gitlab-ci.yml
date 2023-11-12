@@ -27,7 +27,7 @@ test-job:
     - name: mysql:8.0-debian
     - name: postgres:16
   variables:
-    USES_TESTCONTAINERS: true
+    USES_TESTCONTAINERS: "true"
     DATABASE_DB: test
     DATABASE_USER: test
     DATABASE_PASS: test
