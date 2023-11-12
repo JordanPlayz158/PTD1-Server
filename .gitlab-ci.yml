@@ -1,5 +1,5 @@
 default:
-  image: gradle:8.4-jdk17-graal
+  image: gradle:8.4-jdk21-graal
 
 stages:          # List of stages for jobs, and their order of execution
   - build
@@ -10,18 +10,6 @@ build-job:       # This job runs in the build stage, which runs first.
   stage: build
   before_script:
     - echo BUILD_JOB_ID=$CI_JOB_ID >> build.env
-  script:
-    - gradle clean build -x test
-  artifacts:
-    paths:
-      - build/libs/*.jar
-    reports:
-      dotenv: build.env
-
-test-job:
-  stage: build
-  needs:
-    - job: build-job
   variables:
     USES_TESTCONTAINERS: "true"
     DATABASE_DB: test
@@ -46,12 +34,16 @@ test-job:
         POSTGRES_USER: $DATABASE_USER
         POSTGRES_PASSWORD: $DATABASE_PASS
   script:
-    - gradle cleanTest test
+    # Would add clean but GitLab checks out the repository
+    #  each time which removes the build directory
+    - gradle build
   artifacts:
     when: always
     paths:
-      - "build/test-results/test/TEST-*.xml"
+      - build/libs/*.jar
+      - build/test-results/test/TEST-*.xml
     reports:
+      dotenv: build.env
       junit: build/test-results/test/TEST-*.xml
 
 deploy-job:      # This job runs in the deploy stage.
