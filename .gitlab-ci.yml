@@ -37,8 +37,8 @@ test-job:
     - gradle cleanTest test
   artifacts:
     when: always
-    paths:
-      - "build/test-results/test/TEST-*.xml"
+#    paths:
+#      - "build/test-results/test/TEST-*.xml"
     reports:
       junit: build/test-results/test/TEST-*.xml
 
