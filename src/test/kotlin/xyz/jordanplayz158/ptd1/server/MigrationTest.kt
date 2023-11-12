@@ -71,15 +71,20 @@ class MigrationTest {
 
     @Test
     fun testMariaDbMigration() {
-        val mariaDbContainer = MariaDBContainer("mariadb:11")
-            .withDatabaseName(DATABASE)
-            .withUsername(USERNAME)
-            .withPassword(PASSWORD)
+        val jdbc = if(TESTCONTAINERS) {
+            val mariaDbContainer = MariaDBContainer("mariadb:11")
+                .withDatabaseName(DATABASE)
+                .withUsername(USERNAME)
+                .withPassword(PASSWORD)
 
-        if(TESTCONTAINERS) mariaDbContainer.start()
+            mariaDbContainer.start()
+            mariaDbContainer.getJdbcUrl()
+        } else {
+            "jdbc:mariadb://mariadb:3306/$DATABASE"
+        }
 
         val config = HikariConfig()
-        config.jdbcUrl = mariaDbContainer.getJdbcUrl()
+        config.jdbcUrl = jdbc
         config.username = USERNAME
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)
@@ -96,24 +101,30 @@ class MigrationTest {
 
     @Test
     fun testMySqlMigration() {
-        val mySqlContainer = MySQLContainer("mysql:8.0-debian")
-            .withDatabaseName(DATABASE)
-            .withUsername(USERNAME)
-            .withPassword(PASSWORD)
-            // Fix for some distros with wrong ulimits
-            .withCreateContainerCmdModifier {cmd: CreateContainerCmd ->
-                cmd.hostConfig?.withUlimits(arrayOf(
-                    Ulimit("nofile", 20000L, 40000L),
-                    Ulimit("nproc", 65535L, 65535L)
-                ))
-            }
+        val jdbc = if(TESTCONTAINERS) {
+            val mySqlContainer = MySQLContainer("mysql:8.0-debian")
+                .withDatabaseName(DATABASE)
+                .withUsername(USERNAME)
+                .withPassword(PASSWORD)
+                // Fix for some distros with wrong ulimits
+                .withCreateContainerCmdModifier {cmd: CreateContainerCmd ->
+                    cmd.hostConfig?.withUlimits(arrayOf(
+                        Ulimit("nofile", 20000L, 40000L),
+                        Ulimit("nproc", 65535L, 65535L)
+                    ))
+                }
 
-        if(TESTCONTAINERS) mySqlContainer.start()
+            mySqlContainer.start()
+            mySqlContainer.getJdbcUrl()
+        } else {
+            "jdbc:mysql://mysql:3306/$DATABASE"
+        }
+
 
         // Using Hikari because Flyway can't seem to
         //   figure out how to handle them otherwise
         val config = HikariConfig()
-        config.jdbcUrl = mySqlContainer.getJdbcUrl()
+        config.jdbcUrl = jdbc
         config.username = USERNAME
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)
@@ -130,15 +141,20 @@ class MigrationTest {
 
     @Test
     fun testPostgreSqlMigration() {
-        val postgreSqlContainer = PostgreSQLContainer("postgres:16")
-            .withDatabaseName(DATABASE)
-            .withUsername(USERNAME)
-            .withPassword(PASSWORD)
+        val jdbc = if(TESTCONTAINERS) {
+            val postgreSqlContainer = PostgreSQLContainer("postgres:16")
+                .withDatabaseName(DATABASE)
+                .withUsername(USERNAME)
+                .withPassword(PASSWORD)
 
-        if(TESTCONTAINERS) postgreSqlContainer.start()
+            postgreSqlContainer.start()
+            postgreSqlContainer.getJdbcUrl()
+        } else {
+            "jdbc:postgres://postgres:3306/$DATABASE"
+        }
 
         val config = HikariConfig()
-        config.jdbcUrl = postgreSqlContainer.getJdbcUrl()
+        config.jdbcUrl = jdbc
         config.username = USERNAME
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)

@@ -17,18 +17,21 @@ build-job:       # This job runs in the build stage, which runs first.
     DATABASE_PASS: test
   services:
     - name: mariadb:11
+      alias: mariadb
       variables:
         MARIADB_RANDOM_ROOT_PASSWORD: "yes"
         MARIADB_DATABASE: $DATABASE_DB
         MARIADB_USER: $DATABASE_USER
         MARIADB_PASSWORD: $DATABASE_PASS
     - name: mysql:8.0-debian
+      alias: mysql
       variables:
         MYSQL_RANDOM_ROOT_PASSWORD: "yes"
         MYSQL_DATABASE: $DATABASE_DB
         MYSQL_USER: $DATABASE_USER
         MYSQL_PASSWORD: $DATABASE_PASS
     - name: postgres:16
+      alias: postgres
       variables:
         POSTGRES_DB: $DATABASE_DB
         POSTGRES_USER: $DATABASE_USER
