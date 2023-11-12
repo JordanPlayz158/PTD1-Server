@@ -10,3 +10,6 @@ plugins {
 }
 
 rootProject.name = "PTD1-Server"
+
+startParameter.excludedTaskNames.add("distZip")
+startParameter.excludedTaskNames.add("distTar")

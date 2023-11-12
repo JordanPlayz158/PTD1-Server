@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.archivesName
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
@@ -26,7 +28,7 @@ val tag = if(tagEnv === null) {
                 args("describe", "--tags", "--abbrev=0")
                 standardOutput = outputStream
             }
-            outputStream.toString()
+            outputStream.toString().trim()
         } catch(e: Exception) {
             ""
         }
@@ -41,22 +43,32 @@ val isRelease = tagEnv !== null
 
 var commitEnv: String? = System.getenv("CI_COMMIT_SHORT_SHA")
 val commit = if(commitEnv === null) {
-    if(tag.isNotEmpty()) "-" else "" + ByteArrayOutputStream().use { outputStream ->
+    ByteArrayOutputStream().use { outputStream ->
         project.exec {
             executable("git")
             args("rev-parse", "--short", "HEAD")
             standardOutput = outputStream
         }
-        outputStream.toString()
+        outputStream.toString().trim()
     }
 } else {
-    "-$commitEnv"
+    commitEnv
 }
 
 
 
 group = "xyz.jordanplayz158"
-version = "$tag${if(!isRelease) commit else ""}"
+version = "$tag${if(!isRelease) "-$commit" else ""}"
+archivesName
+
+tasks.withType<Jar> {
+    archiveFileName = "${archiveBaseName.get()}-${archiveVersion.get()}-nodeps.${archiveExtension.get()}"
+}
+
+tasks.withType<ShadowJar> {
+    this.archiveFileName = "${archiveBaseName.get()}-${archiveVersion.get()}.${archiveExtension.get()}"
+}
+
 
 repositories {
     mavenCentral()
