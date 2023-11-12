@@ -150,7 +150,7 @@ class MigrationTest {
             postgreSqlContainer.start()
             postgreSqlContainer.getJdbcUrl()
         } else {
-            "jdbc:postgres://postgres:3306/$DATABASE"
+            "jdbc:postgres://postgres:5432/$DATABASE"
         }
 
         val config = HikariConfig()
