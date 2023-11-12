@@ -20,6 +20,8 @@ build-job:       # This job runs in the build stage, which runs first.
 
 test-job:
   stage: build
+  needs:
+    - job: build-job
   variables:
     USES_TESTCONTAINERS: "true"
     DATABASE_DB: test
@@ -28,23 +30,21 @@ test-job:
   services:
     - name: mariadb:11
       variables:
-        MARIADB_RANDOM_ROOT_PASSWORD: yes
-        # Couldn't seem to set the variable value
-        # As the variable above like $DATABASE_DB
-        MARIADB_DATABASE: test
-        MARIADB_USER: test
-        MARIADB_PASSWORD: test
+        MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+        MARIADB_DATABASE: $DATABASE_DB
+        MARIADB_USER: $DATABASE_USER
+        MARIADB_PASSWORD: $DATABASE_PASS
     - name: mysql:8.0-debian
       variables:
-        MYSQL_RANDOM_ROOT_PASSWORD: yes
-        MYSQL_DATABASE: test
-        MYSQL_USER: test
-        MYSQL_PASSWORD: test
+        MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+        MYSQL_DATABASE: $DATABASE_DB
+        MYSQL_USER: $DATABASE_USER
+        MYSQL_PASSWORD: $DATABASE_PASS
     - name: postgres:16
       variables:
-        POSTGRES_DB: test
-        POSTGRES_USER: test
-        POSTGRES_PASSWORD: test
+        POSTGRES_DB: $DATABASE_DB
+        POSTGRES_USER: $DATABASE_USER
+        POSTGRES_PASSWORD: $DATABASE_PASS
   script:
     - gradle cleanTest test
   artifacts:
