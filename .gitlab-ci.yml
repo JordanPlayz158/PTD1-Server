@@ -11,7 +11,7 @@ build-job:       # This job runs in the build stage, which runs first.
   before_script:
     - echo BUILD_JOB_ID=$CI_JOB_ID >> build.env
   variables:
-    USES_TESTCONTAINERS: "true"
+    USES_TESTCONTAINERS: "false"
     DATABASE_DB: test
     DATABASE_USER: test
     DATABASE_PASS: test
