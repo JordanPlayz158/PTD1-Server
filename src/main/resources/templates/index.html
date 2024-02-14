@@ -1,0 +1,38 @@
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{base.layout}">
+<head>
+  <title>PTD</title>
+</head>
+<div layout:fragment="content">
+  <h1>Welcome to my PTD1 Server!</h1>
+
+  <div class="flex-fill my-4">
+    <h2>Play</h2>
+    <p class="mx-5 px-5">You can play the Ruffle version directly in any browser <b>without installing anything</b> BUT the
+      <a href="https://web.archive.org/web/20220401020702/https://www.adobe.com/support/flashplayer/debug_downloads.html">Flash Player Standalone Projector</a>
+      may have better compatibility but will require you to download it and the game via the "Direct SWF" link
+    </p>
+    <div class="d-flex flex-column align-items-center mb-3">
+      <h5>PTD1</h5>
+      <p class="border-top w-25">
+      <p><a th:href="@{/flash(game=PTD1.swf)}">Ruffle</a></p>
+      <a th:href="@{/games/PTD1.swf}">Direct SWF</a>
+      </p>
+    </div>
+    <div class="d-flex flex-column align-items-center mb-3">
+      <h5>PTD1 | Regional Forms</h5>
+      <p class="border-top w-25">
+      <p><a th:href="@{/flash(game=PTD1-RF.swf)}">Ruffle</a></p>
+      <a th:href="@{/games/PTD1-RF.swf}">Direct SWF</a>
+      </p>
+    </div>
+
+    <div class="d-flex flex-column align-items-center">
+      <h5>PTD2</h5>
+      <p class="border-top w-25">
+      <p><a th:href="@{/flash(game=PTD2.swf)}">Ruffle</a></p>
+      <a th:href="@{/games/PTD2.swf}">Direct SWF</a>
+      </p>
+    </div>
+  </div>
+</div>

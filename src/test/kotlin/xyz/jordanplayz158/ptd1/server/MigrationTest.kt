@@ -4,7 +4,6 @@ import com.github.dockerjava.api.command.CreateContainerCmd
 import com.github.dockerjava.api.model.Ulimit
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -15,9 +14,8 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Testcontainers
 import xyz.jordanplayz158.ptd1.server.controller.SWFController
-import xyz.jordanplayz158.ptd1.server.orm.Achievement
+import xyz.jordanplayz158.ptd1.server.migration.SQLMigration
 import xyz.jordanplayz158.ptd1.server.orm.Pokemon
-import xyz.jordanplayz158.ptd1.server.orm.Save
 import xyz.jordanplayz158.ptd1.server.orm.User
 import java.io.File
 import java.util.Locale
@@ -42,15 +40,15 @@ class MigrationTest {
 
     @Test
     fun testSqLiteMigration() {
+        val dbFile = File(tempDir, DATABASE)
+        println("SQLite: $dbFile")
+
         val config = HikariConfig()
-        config.jdbcUrl = "jdbc:sqlite:${File(tempDir, DATABASE)}.db"
+        config.jdbcUrl = "jdbc:sqlite:$dbFile.db"
         val dataSource = HikariDataSource(config)
 
-        Flyway.configure()
-            .dataSource(dataSource)
-            .locations("classpath:db/migration/" + dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH))
-            .load()
-            .migrate()
+        val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/$databaseServer", true))
 
         Database.connect(dataSource)
         accountTest()
@@ -71,11 +69,8 @@ class MigrationTest {
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)
 
-        Flyway.configure()
-            .dataSource(dataSource)
-            .locations("classpath:db/migration/" + dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH))
-            .load()
-            .migrate()
+        val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/$databaseServer", true))
 
         Database.connect(dataSource)
         accountTest()
@@ -105,11 +100,8 @@ class MigrationTest {
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)
 
-        Flyway.configure()
-            .dataSource(dataSource)
-            .locations("classpath:db/migration/" + dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH))
-            .load()
-            .migrate()
+        val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/$databaseServer", true))
 
         Database.connect(dataSource)
         accountTest()
@@ -130,11 +122,8 @@ class MigrationTest {
         config.password = PASSWORD
         val dataSource = HikariDataSource(config)
 
-        Flyway.configure()
-            .dataSource(dataSource)
-            .locations("classpath:db/migration/" + dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH))
-            .load()
-            .migrate()
+        val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/$databaseServer", true))
 
         Database.connect(dataSource)
         accountTest()

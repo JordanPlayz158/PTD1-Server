@@ -173,6 +173,15 @@ CREATE TABLE achievement_redemptions (
 ) COLLATE 'utf8mb4_unicode_ci';
 
 
+CREATE TABLE sessions (
+    id BIGINT(20) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    sessionId VARCHAR(255) NOT NULL UNIQUE,
+    data TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+) COLLATE 'utf8mb4_unicode_ci';
+
+
 CREATE TABLE settings (
     id BIGINT(20) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `key` VARCHAR(255) NOT NULL UNIQUE,

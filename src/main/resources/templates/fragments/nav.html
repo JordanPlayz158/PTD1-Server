@@ -1,0 +1,91 @@
+<nav id="nav" class="navbar sticky-top navbar-expand-lg border-bottom bg-light">
+    <div id="navDiv" class="container-fluid bg-light">
+        <a class="navbar-brand" th:href="@{/}" data-bs-toggle="tooltip" data-bs-title="Pokemon Tower Defense">PTD</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mx-auto mb-lg-0">
+                <li class="nav-item">
+                    <!--<a class="nav-link <#if onPage == 'index'>active" aria-current="page"<#else>"</#if> href="#">PTD1</a>-->
+                    <a class="nav-link" th:href="@{/games/ptd/adoption.php}">Pokemon Adoption</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/games/ptd/changeAvatar.php}">Avatar Store</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/games/ptd/dailyGift.php}">Daily Gift</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" th:href="@{/games/ptd/inventory.php}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Inventory
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/inventory_items.php}">Items</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/changeAvatar.php}">Avatars</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/games/ptd/gameCorner.php}">Game Corner</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" th:href="@{/games/ptd/giveaways.php}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Giveaway Center
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/createGiveaway.php}">Create Giveaway</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/myGiveaways.php}">Your Giveaways</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/giveaways.php}">Latest Giveaways</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" th:href="@{/games/ptd/createTrade.php}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Trading Center
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/createTrade.php}">Create Trade</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/myTrades.php}">Your Trades</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/offers.php}">Your Offers/Requests</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/searchTrades.php}">Search Trades</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/latestTrades.php}">Latest Trades</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Utilities
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/transferTo2.php}">Transfer to PTD 2</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/removeHack.php}">Remove Hacked Tag</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/elite4fix.php}">Elite 4 Black Screen Fix</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <ul class="navbar-nav mb-lg-0">
+                <li th:if="${id}" class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Account
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" th:href="@{/notifications}">Notifications</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/changeNickname.php}">Change Nickname</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/changeAvatar.php}">Change Avatar</a></li>
+                        <li><a class="dropdown-item" th:href="@{/games/ptd/reset_password_form.php}">Change Password</a></li>
+                        <li><a class="dropdown-item" th:href="@{/apiKeys}">API Keys</a></li>
+                        <li><a class="dropdown-item" th:href="@{/logout}">Logout</a></li>
+
+                    </ul>
+                </li>
+                <li th:unless="${id}" class="nav-item">
+                    <a class="nav-link" th:href="@{/login}">Login</a>
+                </li>
+
+                <div class="nav navbar-nav">
+                    <button class="btn" onclick="modeToggle()">
+                        <i id="toggleIcon" class="bi bi-moon"></i>
+                    </button>
+                </div>
+            </ul>
+        </div>
+    </div>
+</nav>

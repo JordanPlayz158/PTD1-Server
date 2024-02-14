@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" class="vh-100" data-bs-theme="light" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta th:if="${redirect}" http-equiv="Refresh" th:content="|5; url='@{redirect}'|" />
+    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/apple-touch-icon.png}">
+    <link rel="icon" type="image/png" sizes="32x32" th:href="@{/favicon-32x32.png}">
+    <link rel="icon" type="image/png" sizes="16x16" th:href="@{/favicon-16x16.png}">
+
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap-icons/font/bootstrap-icons.min.css}">
+
+    <link th:href="@{/webjars/bootstrap5-toggle/css/bootstrap5-toggle.css}" rel="stylesheet">
+    <script th:src="@{/webjars/bootstrap5-toggle/js/bootstrap5-toggle.ecmas.js}"></script>
+
+    <script th:src="@{/webjars/js-cookie/js.cookie.min.js}"></script>
+    <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/tooltips.js}"></script>
+</head>
+<body class="d-flex flex-column">
+<nav th:replace="~{fragments/nav}"></nav>
+<div layout:fragment="content" class="container py-5 mb-5 text-center">
+
+</div>
+<footer th:replace="~{fragments/footer}"></footer>
+</body>
+</html>

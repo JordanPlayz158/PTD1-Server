@@ -1,0 +1,11 @@
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{base.layout}">
+<head>
+    <title th:text="|Ruffle - ${game}|"></title>
+
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+</head>
+<div layout:fragment="content" th:classappend="'d-flex align-items-center position-absolute top-0 bottom-0 start-0 end-0'">
+    <embed class="h-100 w-100 mt-4" th:src="${path}" type="application/x-shockwave-flash"/>
+</div>
+</html>

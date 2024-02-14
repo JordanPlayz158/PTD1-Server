@@ -1,6 +1,5 @@
 package xyz.jordanplayz158.ptd1.server
 
-import com.google.common.net.InetAddresses
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -8,20 +7,24 @@ import io.ktor.server.application.ApplicationStopPreparing
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.log
 import io.ktor.server.engine.ApplicationEngineEnvironment
-import io.ktor.server.freemarker.FreeMarkerContent
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receiveParameters
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
+import io.ktor.server.sessions.sessions
+import io.ktor.server.thymeleaf.ThymeleafContent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import xyz.jordanplayz158.ptd1.server.csrf.csrfMapOf
 import xyz.jordanplayz158.ptd1.server.orm.Setting
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.NumberFormatException
+import java.net.InetAddress
+import java.net.UnknownHostException
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Timestamp
@@ -41,7 +44,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
             return@onCall
 
         if(call.request.httpMethod === HttpMethod.Get) {
-            call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", null))
+            call.respond(ThymeleafContent("databaseMigration/index", csrfMapOf(call.sessions)))
             return@onCall
         }
 
@@ -60,7 +63,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
 
             if(body["isMigrating"] === null) {
                 if(isMigrating) {
-                    call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", mapOf("reasons" to listOf("Migration canceled."))))
+                    call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf("Migration canceled."))))
                     call.application.log.info("Migration canceling.")
                     cancelingMigration = true
                     return@onCall
@@ -75,7 +78,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
             }
 
             if(isMigrating) {
-                call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", mapOf("reasons" to listOf("Migration in progress!"))))
+                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf("Migration in progress!"))))
                 return@onCall
             }
 
@@ -88,7 +91,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
 
             val reasons = ArrayList<String>()
 
-            if(!nullOrBlank(reasons, "host", host) && !InetAddresses.isInetAddress(host!!))
+            if(!nullOrBlank(reasons, "host", host) && isInetAddress(host) != null)
                 reasons.add("'host' is not a valid IPv4 or IPv6 address!")
 
             if(!nullOrBlank(reasons, "port", port)) {
@@ -106,7 +109,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
 
 
             if(reasons.size > 0) {
-                call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", mapOf("reasons" to reasons)))
+                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to reasons)))
                 return@onCall
             }
 
@@ -133,7 +136,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
                     totalRowsStmt.close()
                 }
 
-                call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", mapOf("totalRows" to totalRows)))
+                call.respond(ThymeleafContent("databaseMigration/index", mapOf("totalRows" to totalRows)))
 
 
                 Thread {
@@ -144,7 +147,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
                     var saveItemsOffset = 0
                     var pokemonId = 0L
                     try {
-                        newConn = dataSource!!.connection
+                        newConn = dataSource.connection
                         newConn.autoCommit = false
 
                         val oldUsersStmt = oldConn.prepareStatement("SELECT * FROM users WHERE id >= ? ORDER BY id LIMIT 1000")
@@ -414,7 +417,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
                 }.start()
             } catch (e: Exception) {
                 oldConn?.close()
-                call.respond(FreeMarkerContent("firstRunDatabaseMigration.ftl", mapOf("reasons" to listOf(stackTraceToString(e)))))
+                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf(stackTraceToString(e)))))
                 isMigrating = false
                 return@onCall
             }
@@ -439,6 +442,18 @@ fun stackTraceToString(throwable: Throwable): String {
     pw.close()
     sw.close()
     return stackTrace
+}
+
+fun isInetAddress(address: String?) : InetAddress? {
+    if (address.isNullOrBlank()) {
+        return null
+    }
+
+    return try {
+        InetAddress.getByName(address)
+    } catch (_: UnknownHostException) {
+        null
+    }
 }
 
 
