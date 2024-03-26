@@ -172,6 +172,12 @@ dependencies {
     testImplementation("org.testcontainers:mariadb:$testcontainers_version")
     testImplementation("org.testcontainers:mysql:$testcontainers_version")
     testImplementation("org.testcontainers:postgresql:$testcontainers_version")
+
+    testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
+
+    testCompileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
+    testImplementation("org.mockito:mockito-core:5.11.0")
+    testImplementation("com.caucho:quercus:4.0.66")
 }
 
 
