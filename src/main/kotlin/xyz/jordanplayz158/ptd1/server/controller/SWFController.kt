@@ -8,9 +8,9 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
 import xyz.jordanplayz158.ptd1.server.Keygen
-import xyz.jordanplayz158.ptd1.server.ReasonsEnum
-import xyz.jordanplayz158.ptd1.server.ResultsEnum
-import xyz.jordanplayz158.ptd1.server.SaveVersionEnum
+import xyz.jordanplayz158.ptd.ReasonsEnum
+import xyz.jordanplayz158.ptd.ResultsEnum
+import xyz.jordanplayz158.ptd.SaveVersionEnum
 import xyz.jordanplayz158.ptd1.server.Users
 import xyz.jordanplayz158.ptd1.server.orm.Achievement
 import xyz.jordanplayz158.ptd1.server.orm.Pokemon

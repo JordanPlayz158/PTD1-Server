@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.ByteArrayOutputStream
 
 val ktor_version: String by project
@@ -10,7 +9,7 @@ plugins {
     id("java")
     kotlin("jvm") version "1.9.0"
     kotlin("plugin.serialization") version "1.8.21"
-    id("io.ktor.plugin") version "2.3.4" // Cannot use ktor_version variable as version unfortunately
+    id("io.ktor.plugin") version "2.3.9" // Cannot use ktor_version variable as version unfortunately
 
     id("org.graalvm.buildtools.native") version "0.10.0"
 
@@ -140,7 +139,7 @@ dependencies {
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 
-    implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("ch.qos.logback:logback-classic:1.5.3")
 
     implementation("io.ktor:ktor-server-cio:$ktor_version")
     implementation("io.ktor:ktor-server-thymeleaf:$ktor_version")
@@ -148,14 +147,15 @@ dependencies {
     implementation("io.ktor:ktor-server-sessions:$ktor_version")
 
     implementation("io.ktor:ktor-server-webjars:$ktor_version")
-    implementation("org.webjars:bootstrap:5.3.2")
+    implementation("org.webjars:bootstrap:5.3.3")
 
     implementation("at.favre.lib:bcrypt:0.10.2")
 
-    implementation("org.xerial:sqlite-jdbc:3.45.1.0")
-    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.2")
+    implementation("org.xerial:sqlite-jdbc:3.44.1.0")
+    //implementation("org.xerial:sqlite-jdbc:3.45.0.0")
+    implementation("org.mariadb.jdbc:mariadb-java-client:3.3.3")
     implementation("com.mysql:mysql-connector-j:8.3.0")
-    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.postgresql:postgresql:42.7.3")
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     runtimeOnly("org.jetbrains.exposed:exposed-jdbc:$exposed_version")

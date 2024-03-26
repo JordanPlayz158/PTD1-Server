@@ -1,4 +1,4 @@
-package xyz.jordanplayz158.ptd1.server.migration
+package xyz.jordanplayz158.ptd.migration
 
 import java.io.File
 import java.sql.Connection

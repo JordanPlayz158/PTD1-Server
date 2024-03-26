@@ -42,7 +42,8 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-/.env
+/.env*
 /static
 /templates
-/ptd1.db
+/*.db
+/*.swf

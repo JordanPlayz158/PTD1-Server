@@ -30,8 +30,11 @@ import org.thymeleaf.context.IWebContext
 import org.thymeleaf.linkbuilder.StandardLinkBuilder
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
 import org.thymeleaf.templateresolver.FileTemplateResolver
+import xyz.jordanplayz158.ptd.ResultsEnum
+import xyz.jordanplayz158.ptd.databaseConfig
+import xyz.jordanplayz158.ptd.getCorrectFile
 import xyz.jordanplayz158.ptd1.server.controller.SWFController
-import xyz.jordanplayz158.ptd1.server.migration.SQLMigration
+import xyz.jordanplayz158.ptd.migration.SQLMigration
 import xyz.jordanplayz158.ptd1.server.orm.Setting
 import xyz.jordanplayz158.ptd1.server.session.SQLSessionStorage
 import xyz.jordanplayz158.ptd1.server.session.UserSession
@@ -46,11 +49,11 @@ fun main() {
     // `db`, `static`, `templates`, `.env` will be shipped in a zip, no need to copy at runtime
     //copyResourceToFileSystem(".env", File(".env"))
 
-    dataSource = HikariDataSource(databaseConfig())
+    dataSource = HikariDataSource(databaseConfig(dotenv))
     val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
 
     embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
-        SQLMigration(dataSource.connection, getCorrectFile("db/migration/$databaseServer", developmentMode))
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/ptd1/$databaseServer", developmentMode))
 
         val database = Database.connect(dataSource)
 
@@ -195,31 +198,4 @@ fun main() {
             dataSource.close()
         })
     }.start(wait = true)
-}
-
-fun databaseConfig() : HikariConfig {
-    val config = HikariConfig()
-
-    config.jdbcUrl = dotenv["DATABASE_URL"]
-    config.username = dotenv["DATABASE_USERNAME"]
-    config.password = dotenv["DATABASE_PASSWORD"]
-
-    val databaseDriver = dotenv["DATABASE_DRIVER"]
-    if(databaseDriver !== null) config.driverClassName = databaseDriver
-
-    config.addDataSourceProperty("cachePrepStmts", dotenv["DATABASE_CACHE_PREP_STMTS", "true"])
-    config.addDataSourceProperty("prepStmtCacheSize", dotenv["DATABASE_PREP_STMT_CACHE_SIZE", "375"])
-    config.addDataSourceProperty("prepStmtCacheSqlLimit", dotenv["DATABASE_PREP_STMT_CACHE_SQL_LIMIT", "2048"])
-    config.addDataSourceProperty("useServerPrepStmts", dotenv["DATABASE_USE_SERVER_PREP_STMTS", "true"])
-
-    return config
-}
-
-fun getCorrectFile(path: String, developmentMode: Boolean) : File {
-    return when (developmentMode) {
-        // For development, it is nicer to bypass the folders and allow changes to
-        //  resources folder directly
-        true -> File(object {}.javaClass.getResource("/$path")!!.toURI())
-        false -> File(path)
-    }
 }

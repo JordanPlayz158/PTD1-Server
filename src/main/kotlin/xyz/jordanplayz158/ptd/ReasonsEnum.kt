@@ -1,4 +1,4 @@
-package xyz.jordanplayz158.ptd1.server
+package xyz.jordanplayz158.ptd
 
 enum class ReasonsEnum(val id: String) {
     SUCCESS_LOGGED_IN("LoggedIn"),
@@ -20,6 +20,11 @@ enum class ReasonsEnum(val id: String) {
     SUCCESS_GET_PRIZE_14("getPrize14"),
     SUCCESS_USE_CODE("UseCode"),
     SUCCESS_SAVED("saved"),
+
+    // PTD2 Specific
+    SUCCESS_LOADED_ACCOUNT("loadedAccount"),
+
+
 
     FAILURE_DATABASE_CONNECTION("DatabaseConnection"),
     FAILURE_OLD_VERSION("oldVersion"),
