@@ -82,7 +82,7 @@ application {
     // files will be included in Git/VCS as a result (rather than auto-generating in GitLab CI)
     //applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true", "-agentlib:native-image-agent=config-output-dir=src/main/resources/META-INF/native-image")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
-    mainClass.set("xyz.jordanplayz158.ptd1.server.PTD1ServerKt")
+    mainClass.set("xyz.jordanplayz158.ptd.PTDServerKt")
 }
 
 graalvmNative {
@@ -174,10 +174,6 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:$testcontainers_version")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
-
-    testCompileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    testImplementation("org.mockito:mockito-core:5.11.0")
-    testImplementation("com.caucho:quercus:4.0.66")
 }
 
 

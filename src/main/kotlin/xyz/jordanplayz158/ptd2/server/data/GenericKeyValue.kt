@@ -10,8 +10,8 @@ data class GenericKeyValue(val num: Byte, val quantity: Int) {
         fun convertItems(items: SizedIterable<PTD2Item>): List<GenericKeyValue> {
             val array = ArrayList<GenericKeyValue>(items.count().toInt())
 
-            for ((index, item) in items.withIndex()) {
-                array[index] = GenericKeyValue(item.num, item.value)
+            for (item in items) {
+                array.add(GenericKeyValue(item.num, item.value))
             }
 
             return array
@@ -20,8 +20,8 @@ data class GenericKeyValue(val num: Byte, val quantity: Int) {
         fun convertExtra(extras: SizedIterable<PTD2Extra>): List<GenericKeyValue> {
             val array = ArrayList<GenericKeyValue>(extras.count().toInt())
 
-            for ((index, item) in extras.withIndex()) {
-                array[index] = GenericKeyValue(item.num, item.value)
+            for (item in extras) {
+                array.add(GenericKeyValue(item.num, item.value))
             }
 
             return array

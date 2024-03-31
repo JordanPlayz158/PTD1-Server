@@ -4,17 +4,16 @@ import at.favre.lib.crypto.bcrypt.BCrypt
 import io.ktor.http.*
 import io.ktor.server.util.*
 import io.ktor.util.date.*
-import org.jetbrains.exposed.sql.SizedIterable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import xyz.jordanplayz158.ptd.ReasonsEnum
 import xyz.jordanplayz158.ptd.ResultsEnum
-import xyz.jordanplayz158.ptd2.server.*
+import xyz.jordanplayz158.ptd2.server.Accounts
+import xyz.jordanplayz158.ptd2.server.Obfuscation
 import xyz.jordanplayz158.ptd2.server.orm.*
 import java.time.Instant
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.first
 
 class PTD2SWFController {
     companion object {
@@ -49,45 +48,32 @@ class PTD2SWFController {
             //  return false to listOf("Result" to ResultsEnum.SUCCESS.id, "extra" to "ycm")
             //}
 
-            val stories = account.stories
 
             val response = mutableListOf("Result" to ResultsEnum.SUCCESS.id)
-            if (stories === null) {
-                response.add("extra" to "ycm")
-                return true to response
-            }
 
+            transaction {
+                if (account.dex1 !== null) {
+                    val stories = account.stories
+                    response.add("extra" to Obfuscation.encodeStory(stories))
+                    response.add("dw" to dayOfWeekToInt().toString())
 
-            // TODO: Can't find the reason for the nickname and color in the original source
-            //  could be important though so leaving a note
+                    // Sadly no array read for object variables otherwise this could be generified into a for loop like the original
+                    response.addAll(addDexes(account.dex1!!, 1))
+                    response.addAll(addDexes(account.dex2!!, 2))
+                    response.addAll(addDexes(account.dex3!!, 3))
+                    response.addAll(addDexes(account.dex4!!, 4))
+                    response.addAll(addDexes(account.dex5!!, 5))
+                    response.addAll(addDexes(account.dex6!!, 6))
 
-//                story["profile$i"] = mapOf(
-//                    "Nickname" to storyI.nickname,
-//                    "Color" to storyI.color,
-//                )
+                    for (i in 1..3) {
+                        val profile = stories.firstOrNull { it.num == i.toByte() }
+                        if (profile === null) continue
 
-            // TODO: Never generated stories on creation or otherwise
-            //  so need to check the code from KGM again tomorrow
-            response.add("extra" to Obfuscation.encodeStory(stories))
-            response.add("dw" to dayOfWeekToInt().toString())
-
-
-
-            // Sadly no array read for object variables otherwise this could be generified into a for loop like the original
-            if (account.dex1 !== null) {
-                response.addAll(addDexes(account.dex1!!, 1))
-                response.addAll(addDexes(account.dex2!!, 2))
-                response.addAll(addDexes(account.dex3!!, 3))
-                response.addAll(addDexes(account.dex4!!, 4))
-                response.addAll(addDexes(account.dex5!!, 5))
-                response.addAll(addDexes(account.dex6!!, 6))
-
-                for (i in 1..3) {
-                    val profile = stories.firstOrNull { it.num == i.toByte() }
-                    if (profile === null) continue
-
-                    response.add("Nickname$i" to profile.nickname)
-                    response.add("Version$i" to profile.color.toString())
+                        response.add("Nickname$i" to profile.nickname)
+                        response.add("Version$i" to profile.color.toString())
+                    }
+                } else {
+                    response.add("extra" to "ycm")
                 }
             }
 
@@ -118,32 +104,47 @@ class PTD2SWFController {
 
         // If not already mentioned, messy return type was fixed in spring boot, will be backported
         fun loadStoryProfile(account: PTD2Account, whichProfile: Int) : Pair<Boolean, List<Pair<String, String>>> {
-            val stories: SizedIterable<PTD2Story>? = account.stories
-            val profile = stories?.firstOrNull { it.num == whichProfile.toByte() }
+            return transaction {
+                val stories = account.stories
+                val profile = stories?.firstOrNull { it.num == whichProfile.toByte() }
 
-            if (stories === null || profile === null) {
-                // TODO: Turn enums into pairs of key and value
-                //  so there is less redundancy in actual code
-                return false to listOf("Result" to ResultsEnum.FAILURE.id, "Reason" to ReasonsEnum.FAILURE_NOT_FOUND.id)
+                if (stories === null || profile === null) {
+                    // TODO: Turn enums into pairs of key and value
+                    //  so there is less redundancy in actual code
+                    return@transaction false to listOf(
+                        "Result" to ResultsEnum.FAILURE.id,
+                        "Reason" to ReasonsEnum.FAILURE_NOT_FOUND.id
+                    )
+                }
+
+                val response = mutableListOf("Result" to ResultsEnum.SUCCESS.id)
+
+
+                val encodedData = Obfuscation.encodeStoryProfile(profile)
+                response.add("CS" to profile.currentSave)
+                response.add("CT" to profile.currentTime.toString())
+                response.add("Gender" to profile.gender.toString())
+                response.add("extra" to encodedData[0].toString()) // Items
+                response.add("extra2" to encodedData[1].toString())
+
+                val pokemonData = encodedData[2] as Pair<String, String>
+                response.add(
+                    "extra3" to pokemonData.first // Pokemons data
+                ) // Pokemon Nicknames
+
+                if(pokemonData.second.isNotEmpty()) {
+                    val pokemonNameParameters =
+                        pokemonData.second.substring(1).parseUrlEncodedParameters(Charsets.UTF_8, 0)
+                    for (name in pokemonNameParameters.names()) {
+                        response.add(name to pokemonNameParameters[name]!!)
+                    }
+                }
+
+                response.add("extra4" to encodedData[3].toString())
+                response.add("extra5" to encodedData[4].toString())
+
+                return@transaction true to response
             }
-
-            val response = mutableListOf("Result" to ResultsEnum.SUCCESS.id)
-
-
-            val encodedData = Obfuscation.encodeStoryProfile(profile)
-            response.add("CS" to profile.currentSave)
-            response.add("CT" to profile.currentTime.toString())
-            response.add("Gender" to profile.gender.toString())
-            response.add("extra" to encodedData[0].toString()) // Items
-            response.add("extra2" to encodedData[1].toString())
-
-            val pokemonData = encodedData[2] as Pair<String, String>
-            response.add("extra3" to pokemonData.first // Pokemons data
-                    + pokemonData.second) // Pokemon Nicknames
-            response.add("extra4" to encodedData[3].toString())
-            response.add("extra5" to encodedData[4].toString())
-
-            return true to response
         }
 
         fun saveStory(account: PTD2Account, whichProfile: Int, parameters: Parameters) : Pair<Boolean, List<Pair<String, String>>> {
@@ -155,13 +156,19 @@ class PTD2SWFController {
 
             val save = saveDataString.parseUrlEncodedParameters(Charsets.UTF_8, 0)
 
-            val response = mutableListOf("Result" to ResultsEnum.SUCCESS.id)
-            transaction {
+            return transaction {
+                val response = ArrayList<Pair<String, String>>(1)
                 val whichProfileByte = whichProfile.toByte()
-                val profile = if (save["NewGameSave"] === null) {
-                    account.stories.first { it.num == whichProfileByte }
-                } else {
-                    PTD2Story.new {
+                var profile = account.stories.firstOrNull { it.num == whichProfileByte }
+
+                if (save["NewGameSave"] !== null) {
+                    if (profile !== null) {
+                        // Rather than updating existing entry
+                        //  deleting works better due to cascading on delete
+                        profile.delete()
+                    }
+
+                    profile = PTD2Story.new {
                         this.account = account.id
                         this.num = whichProfileByte
                         this.nickname = save["Nickname"]!!
@@ -171,6 +178,10 @@ class PTD2SWFController {
                         this.money = 10
                         this.currentTime = 100
                     }
+                }
+
+                if (profile === null) {
+                    return@transaction false to listOf("Result" to ResultsEnum.FAILURE.id, "Reason" to ReasonsEnum.FAILURE_NOT_FOUND.id)
                 }
 
                 // I think this can be done better, not the point though
@@ -187,7 +198,14 @@ class PTD2SWFController {
                 // CurrentSave
                 val currentSave = save["CS"]
                 if (currentSave !== null) {
-                    profile.currentSave = currentSave
+                    // MySQLi coerces null strings/null values to 0
+                    //  as type 'i' is provided
+                    if (currentSave == "null") {
+                        // Can add as a default and remove later
+                        profile.currentSave = "0"
+                    } else {
+                        profile.currentSave = currentSave
+                    }
                 }
 
                 if (save["TimeSave"] !== null) {
@@ -205,12 +223,12 @@ class PTD2SWFController {
                     account.dex6 = parameters["dextra6"]
                 }
 
-                val pokes = Obfuscation.decodePokeInfo(parameters["extra3"]!!, account.email)
+                val pokes = Obfuscation.decodePokeInfo(parameters["extra3"]!!, profile)
 
                 for ((saveId, poke) in pokes) {
                     val reasons = poke["reason"] as ArrayList<Int>
 
-                    var pokemon = PTD2Pokemon.findById(saveId)
+                    var pokemon = profile.pokes.firstOrNull { it.swfId == saveId }
 
                     val pokeNicknameNum = poke["needNickname"]
                     var nickname: String? = null
@@ -222,29 +240,26 @@ class PTD2SWFController {
                     for (reason in reasons) {
                         when (reason) {
                             1 -> { // Captured
-                                pokemon = PTD2Pokemon.new(saveId) {
+                                pokemon = PTD2Pokemon.new {
                                     this.story = profile.id
-
-                                    // TODO: Nickname isn't set in the decode poke info as far as I can tell
-                                    //   recheck source decode poke info
-                                    //this.nickname = (poke["Nickname"] as String)
+                                    this.swfId = (poke["saveID"] as Int)
                                     this.nickname = nickname!!
-                                    this.num = (poke["num"] as Short)
+                                    this.num = (poke["num"] as Int).toShort()
                                     this.xp = (poke["xp"] as Int)
-                                    this.lvl = (poke["lvl"] as Short)
-                                    this.move1 = (poke["move1"] as Short)
-                                    this.move2 = (poke["move2"] as Short)
-                                    this.move3 = (poke["move3"] as Short)
-                                    this.move4 = (poke["move4"] as Short)
-                                    this.targetType = (poke["targetingType"] as Byte)
-                                    this.gender = (poke["gender"] as Byte)
+                                    this.lvl = (poke["lvl"] as Int).toShort()
+                                    this.move1 = (poke["move1"] as Int).toShort()
+                                    this.move2 = (poke["move2"] as Int).toShort()
+                                    this.move3 = (poke["move3"] as Int).toShort()
+                                    this.move4 = (poke["move4"] as Int).toShort()
+                                    this.targetType = (poke["targetingType"] as Int).toByte()
+                                    this.gender = (poke["gender"] as Int).toByte()
                                     this.pos = (poke["pos"] as Int)
-                                    this.extra = (poke["extra"] as Byte)
-                                    this.item = (poke["item"] as Byte)
+                                    this.extra = (poke["extra"] as Int).toByte()
+                                    this.item = (poke["item"] as Int).toByte()
                                     this.tag = (poke["tag"] as String)
                                 }
                             }
-                            2 -> pokemon!!.lvl = poke["lvl"] as Short // Level up
+                            2 -> pokemon!!.lvl = (poke["lvl"] as Int).toShort() // Level up
                             3 -> pokemon!!.xp = poke["xp"] as Int // XP up
                             4 -> { // Change moves
                                 pokemon!!.move1 = (poke["move1"] as Short)
@@ -264,7 +279,7 @@ class PTD2SWFController {
 
                     val needSaveId = poke["needSaveID"]
                     if (needSaveId !== null) {
-                        response.add("PID$needSaveId" to poke["saveID"] as String)
+                        response.add("PID$needSaveId" to saveId.toString())
                     }
                 }
 
@@ -296,13 +311,14 @@ class PTD2SWFController {
 
                     extraDb.value = value
                 }
-            }
 
-            return true to response
+                response.add("Result" to ResultsEnum.SUCCESS.id)
+                return@transaction true to response
+            }
         }
 
         fun deleteStory(account: PTD2Account, whichProfile: Int): Pair<Boolean, List<Pair<String, String>>> {
-            account.stories.first { it.num == whichProfile.toByte() }.delete()
+            transaction { account.stories.first { it.num == whichProfile.toByte() }.delete() }
 
             return true to listOf("Result" to ResultsEnum.SUCCESS.id)
         }
@@ -312,28 +328,34 @@ class PTD2SWFController {
                 //return false to listOf("Result" to ResultsEnum.SUCCESS.id, "extra" to "ycm", "extra2" to "yqym")
             //}
 
-            val oneV1s = account.oneV1
             val response = mutableListOf("Result" to ResultsEnum.SUCCESS.id, "extra2" to "yqym")
 
-            if (oneV1s === null) {
-                // Order doesn't matter but for KGM testing, it "does"
-                // can probably change the test to parse the string as arrays
-                // and compare array contents ignoring order of elements
-                response.add(1, "extra" to "ycm")
-                return true to response
+            // Somehow a SizedIterator can somehow be null
+            //  even when it is not null but this should be safe
+
+            return transaction {
+                // Everything even the most insignificant
+                //  innocuous thing, put it in a transaction
+                val oneV1s = account.oneV1
+
+                if (oneV1s.count() == 0L) {
+                    // Order doesn't matter but for KGM testing, it "does"
+                    // can probably change the test to parse the string as arrays
+                    // and compare array contents ignoring order of elements
+                    response.add(1, "extra" to "ycm")
+                    return@transaction true to response
+                }
+
+                val encodedData = Obfuscation.encode1v1(oneV1s)
+                response.add(1, "extra" to encodedData)
+                return@transaction true to response
             }
-
-
-            // TODO: remember to put these in transactions, as exposed requires it for any db interaction
-            val encodedData = Obfuscation.encode1v1(account.oneV1)
-            response.add(1, "extra" to encodedData)
-            return true to response
         }
 
         fun save1v1(account: PTD2Account, whichProfile: Int, parameters: Parameters): Pair<Boolean, List<Pair<String, String>>> {
             val newData = Obfuscation.decode1v1(parameters["extra"]!!)
 
-            transaction {
+            return transaction {
                 var oneV1 = account.oneV1.firstOrNull { it.num == whichProfile.toByte() }
 
                 if (oneV1 === null) {
@@ -347,26 +369,23 @@ class PTD2SWFController {
 
                 oneV1.money = newData["money"]!!
                 oneV1.levelUnlocked = newData["levelUnlocked"]!!.toByte()
-
+                return@transaction true to listOf("Result" to ResultsEnum.SUCCESS.id, "Reason" to ReasonsEnum.SUCCESS_LOADED_ACCOUNT.id)
             }
-
-            return true to listOf("Result" to ResultsEnum.SUCCESS.id, "Reason" to ReasonsEnum.SUCCESS_LOADED_ACCOUNT.id)
         }
 
         fun delete1v1(account: PTD2Account, whichProfile: Int): Pair<Boolean, List<Pair<String, String>>> {
-            transaction {
+            return transaction {
                 account.oneV1.firstOrNull { it.num == whichProfile.toByte() }?.delete()
+                return@transaction true to listOf("Result" to ResultsEnum.SUCCESS.id)
             }
-
-            return true to listOf("Result" to ResultsEnum.SUCCESS.id)
         }
 
-        fun maintenance(): List<Pair<String, String>> {
-            return listOf("Result" to ResultsEnum.FAILURE.id, "Reason" to ReasonsEnum.FAILURE_MAINTENANCE.id)
+        fun maintenance(): Pair<Boolean, List<Pair<String, String>>> {
+            return false to listOf("Result" to ResultsEnum.FAILURE.id, "Reason" to ReasonsEnum.FAILURE_MAINTENANCE.id)
         }
 
         fun userExists(email: String) : Boolean {
-            return transaction { PTD2Account.find(Accounts.email eq email).firstOrNull() } !== null
+            return transaction { return@transaction PTD2Account.find(Accounts.email eq email).firstOrNull() !== null }
         }
     }
 }

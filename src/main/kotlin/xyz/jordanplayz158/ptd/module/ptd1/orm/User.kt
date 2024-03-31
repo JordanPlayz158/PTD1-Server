@@ -1,11 +1,11 @@
-package xyz.jordanplayz158.ptd1.server.orm
+package xyz.jordanplayz158.ptd.module.ptd1.orm
 
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import xyz.jordanplayz158.ptd1.server.Achievements
-import xyz.jordanplayz158.ptd1.server.Saves
-import xyz.jordanplayz158.ptd1.server.Users
+import xyz.jordanplayz158.ptd.module.ptd1.Achievements
+import xyz.jordanplayz158.ptd.module.ptd1.Saves
+import xyz.jordanplayz158.ptd.module.ptd1.Users
 
 class User(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<User>(Users)

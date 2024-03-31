@@ -14,10 +14,7 @@ object Accounts : LongIdTable("accounts") {
 }
 
 object Stories : LongIdTable("stories") {
-    // A little misleading, a story will always have a reference to
-    //  an account but for the optional reference FROM account, it needs
-    //  to be nullable
-    val account = reference("account_id", Accounts).nullable()
+    val account = reference("account_id", Accounts)
 
     val num = byte("num")
     val nickname = varchar("Nickname", 40)
@@ -69,7 +66,7 @@ object Items : LongIdTable("items") {
 }
 
 object OneV1S : LongIdTable("1v1s") {
-    val account = reference("account_id", Accounts).nullable()
+    val account = reference("account_id", Accounts)
 
     var num = byte("num")
     var money = integer("money")

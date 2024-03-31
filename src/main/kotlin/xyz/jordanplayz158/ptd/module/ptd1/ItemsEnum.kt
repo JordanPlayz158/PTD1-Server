@@ -1,4 +1,4 @@
-package xyz.jordanplayz158.ptd1.server
+package xyz.jordanplayz158.ptd.module.ptd1
 
 enum class ItemsEnum(val id: Int) {
     // Stones

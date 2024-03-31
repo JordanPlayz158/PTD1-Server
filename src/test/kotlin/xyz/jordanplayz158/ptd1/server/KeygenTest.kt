@@ -1,5 +1,6 @@
 package xyz.jordanplayz158.ptd1.server
 
+import xyz.jordanplayz158.ptd.module.ptd1.Keygen
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

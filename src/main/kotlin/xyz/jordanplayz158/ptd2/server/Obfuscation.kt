@@ -35,7 +35,7 @@ class Obfuscation {
             for (char in string.toCharArray()) {
                 val int = convertToInt(char)
                 if (int == -1) {
-                    return "-1"
+                    return "-100"
                 }
 
                 stringBuilder.append(int)
@@ -59,10 +59,16 @@ class Obfuscation {
             val stringBuilder = StringBuilder()
 
             for (char in num.toCharArray()) {
-                val convertedChar = convertToString(char.digitToInt())
+                // PHP coerces strings that cannot be converted to ints
+                //  to 0
+                val convertedChar = convertToString(if (char.isDigit()) {
+                    char.digitToInt()
+                } else {
+                    0
+                })
 
                 if (convertedChar == '1') {
-                    return "-1"
+                    return "-100"
                 }
 
                 stringBuilder.append(convertedChar)
@@ -106,7 +112,7 @@ class Obfuscation {
 
                 if (digit === null) {
                     // May not be equivalent to ord
-                    checksum += char.code
+                    checksum += char.code - 96
                     continue
                 }
 
@@ -116,9 +122,9 @@ class Obfuscation {
             return checksum * 3
         }
 
-        fun decodePokeInfo(encoded: String, email: String): HashMap<Long, HashMap<String, Any>> {
-            val pokemons = HashMap<Long, HashMap<String, Any>>()
-            var availableSaveId = getAvailableSaveId(email)
+        fun decodePokeInfo(encoded: String, story: PTD2Story): HashMap<Int, HashMap<String, Any>> {
+            val pokemons = HashMap<Int, HashMap<String, Any>>()
+            var availableSaveId = getAvailableSaveId(story)
 
             val iterator = encoded.iterator()
 
@@ -130,33 +136,28 @@ class Obfuscation {
             //val pokes = convertStringToInt(iterator.nextXString(pokeLength))
             val pokes = iterator.nextVariable(false)
 
-            // While has pokes
-            while (iterator.hasNext()) {
+            for (i in 1..pokes) {
+                if (!iterator.hasNext()) break
+
                 val poke = HashMap<String, Any>()
                 val reasons = ArrayList<Int>()
 
-                //val pokeInfoLengthLength = convertStringToInt(iterator.nextChar())
-                //val pokeInfoLength = convertStringToInt(iterator.nextXString(pokeInfoLengthLength))
                 val pokeInfoLength = iterator.nextVariable(false)
-
-                // May be able to implement a function as this seems to be a common pattern
-                //   Length of Length -> Length of Value -> Value
-                //val saveIdLengthLength = convertStringToInt(iterator.nextChar())
-                //val saveIdLength = convertStringToInt(iterator.nextXString(saveIdLengthLength))
-                //val saveId = convertStringToInt(iterator.nextXString(saveIdLength))
                 val saveId = iterator.nextVariable(true)
 
                 poke["saveID"] = saveId
 
-                for (i in 0..pokeInfoLength) {
+                for (j in 0..<pokeInfoLength) {
                     val infoTypeLength = convertStringToInt(iterator.nextChar())
                     val infoType = convertStringToInt(iterator.nextXString(infoTypeLength))
+
 
                     when (infoType) {
                         // Captured
                         1 -> {
-                            poke["needNickname"] = i + 1
-                            poke["saveID"] = availableSaveId++
+                            poke["needNickname"] = i
+                            poke["saveID"] = availableSaveId
+                            availableSaveId++
 
                             val num = iterator.nextVariable(false)
                             poke["num"] = num
@@ -178,7 +179,9 @@ class Obfuscation {
                             poke["extra"] = extra
 
                             poke["item"] = iterator.nextVariable(false)
-                            poke["tag"] = iterator.nextVariable(false)
+
+                            val tagLength = convertStringToInt(iterator.nextChar())
+                            poke["tag"] = iterator.nextXString(tagLength)
 
                             poke["needSaveID"] = pos
                         }
@@ -198,7 +201,7 @@ class Obfuscation {
                         // Evolve
                         6 -> poke["num"] = iterator.nextVariable(false)
                         // Change Nickname
-                        7 -> poke["needNickname"] = i + 1
+                        7 -> poke["needNickname"] = i
                         // Pos change
                         8 -> poke["pos"] = iterator.nextVariable(false)
                         // Need Tag
@@ -214,7 +217,7 @@ class Obfuscation {
                     reasons.add(infoType)
                 }
                 poke["reason"] = reasons
-                pokemons[poke["saveID"] as Long] = poke
+                pokemons[poke["saveID"] as Int] = poke
             }
 
             return pokemons
@@ -234,7 +237,7 @@ class Obfuscation {
                  For some reason sometimes the game
                  sends only the new pos of one poke */
                 if (parts.containsKey(poke.pos)) {
-                    for (i in 0..pokemonsSize) {
+                    for (i in 0..<pokemonsSize) {
                         if (!parts.containsKey(i)) {
                             poke.pos = i
                             break
@@ -244,20 +247,20 @@ class Obfuscation {
 
                 // Probably convert the hashmap to an arraylist of object
                 //   Then can also remove the !!'s
-                val (num, numLength) = convertValue(poke.num)!!
-                val (xp, xpLength, xpLengthLength) = convertValueVariableLength(poke.xp)!!
-                val (lvl, lvlLength) = convertValue(poke.lvl)!!
-                val (move1, move1Length) = convertValue(poke.move1)!!
-                val (move2, move2Length) = convertValue(poke.move2)!!
-                val (move3, move3Length) = convertValue(poke.move3)!!
-                val (move4, move4Length) = convertValue(poke.move4)!!
-                val (tt, ttLength) = convertValue(poke.targetType)!!
-                val (gender, genderLength) = convertValue(poke.gender)!!
-                val (saveId, saveIdLength, saveIdLengthLength) = convertValueVariableLength(poke.story)!!
+                val (num, numLength) = convertValue(poke.num)
+                val (xp, xpLength, xpLengthLength) = convertValueVariableLength(poke.xp)
+                val (lvl, lvlLength) = convertValue(poke.lvl)
+                val (move1, move1Length) = convertValue(poke.move1)
+                val (move2, move2Length) = convertValue(poke.move2)
+                val (move3, move3Length) = convertValue(poke.move3)
+                val (move4, move4Length) = convertValue(poke.move4)
+                val (tt, ttLength) = convertValue(poke.targetType)
+                val (gender, genderLength) = convertValue(poke.gender)
+                val (saveId, saveIdLength, saveIdLengthLength) = convertValueVariableLength(poke.swfId)
                 val posValue = poke.pos
-                val (pos, posLength) = convertValue(poke.pos)!!
-                val (extra, extraLength) = convertValue(poke.extra)!!
-                val (item, itemLength) = convertValue(poke.item)!!
+                val (pos, posLength) = convertValue(poke.pos)
+                val (extra, extraLength) = convertValue(poke.extra)
+                val (item, itemLength) = convertValue(poke.item)
                 val tag = poke.tag
                 val tagLength = convertIntToString(tag.length)
 
@@ -293,28 +296,31 @@ class Obfuscation {
             // Gonna use Quercus for Unit Testing
         }
 
-        private fun convertValue(value: Any): Pair<String, String>? {
-            val valueCast = castOrNull<Int>(value)
-
-            if (valueCast === null) {
-                println("Error casting value '$value' as an Int")
-                return null
-            }
-
-            val valueConverted = convertIntToString(valueCast)
+        private fun convertValue(long: Long): Pair<String, String> {
+            val valueConverted = convertIntToString(long)
             return valueConverted to convertIntToString(valueConverted.length)
         }
 
-        private fun convertValueVariableLength(value: Any): Triple<String, String, String>? {
-            val convertedValAndLength = convertValue(value)
+        private fun convertValue(int: Int): Pair<String, String> {
+            return convertValue(int.toLong())
+        }
 
-            if (convertedValAndLength === null) {
-                return null
-            }
+        private fun convertValue(short: Short): Pair<String, String> {
+            return convertValue(short.toLong())
+        }
 
+        private fun convertValue(byte: Byte): Pair<String, String> {
+            return convertValue(byte.toLong())
+        }
+
+        private fun convertValueVariableLength(long: Long): Triple<String, String, String> {
+            val convertedValAndLength = convertValue(long)
             val (convertedValue, length) = convertedValAndLength
-
             return Triple(convertedValue, length, convertIntToString(length.length))
+        }
+
+        private fun convertValueVariableLength(int: Int): Triple<String, String, String> {
+            return convertValueVariableLength(int.toLong())
         }
 
         fun encodeInventory(items: List<GenericKeyValue>): String {
@@ -324,8 +330,8 @@ class Obfuscation {
             for ((num, quantity) in items) {
                 if (quantity > 0) {
                     qnt++
-                    val (encodedNum, numLength) = convertValue(num)!!
-                    val (encodedQuantity, quantityLength) = convertValue(quantity)!!
+                    val (encodedNum, numLength) = convertValue(num)
+                    val (encodedQuantity, quantityLength) = convertValue(quantity)
 
                     encodedItems.append(numLength).append(encodedNum)
                         .append(quantityLength).append(encodedQuantity)
@@ -348,10 +354,11 @@ class Obfuscation {
 
             val iterator = encodedItems.iterator()
             val encodedLengthLength = convertStringToInt(iterator.nextChar())
+            iterator.nextX(encodedLengthLength)
             val inventoryLengthLength = convertStringToInt(iterator.nextChar())
             val inventoryLength = convertStringToInt(iterator.nextXString(inventoryLengthLength))
 
-            for (i in 0..inventoryLength) {
+            for (i in 0..<inventoryLength) {
                 val num = iterator.nextVariable(false)
                 val quantity = iterator.nextVariable(false)
 
@@ -372,7 +379,8 @@ class Obfuscation {
 
             // Getting the size of data
             val encodedLengthLength = convertStringToInt(iterator.nextChar())
-            val encodedLength = convertStringToInt(iterator.nextXString(encodedLengthLength))
+            val encodedLength = convertStringToInt(
+                iterator.nextXString(encodedLengthLength))
 
             val money = iterator.nextVariable(false)
             val levelsUnlocked = iterator.nextVariable(false)
@@ -392,7 +400,7 @@ class Obfuscation {
                 val moneyLength = convertIntToString(encodedMoney.length)
 
                 val encodedLevels = convertIntToString(profile.levelUnlocked)
-                val levelsLength = convertIntToString(encodedLevels)
+                val levelsLength = convertIntToString(encodedLevels.length)
 
                 encodedData.append(whichProfile)
                     .append(moneyLength).append(encodedMoney)
@@ -438,7 +446,8 @@ class Obfuscation {
             val dataLengthLength = dataLength.toString().length
             val encodedLength = convertIntToString(getLength(dataLengthLength, dataLength))
 
-            encodedData.insert(0, currentProfileString).insert(0, encodedLength)
+            encodedData.insert(0, currentProfileString)
+                .insert(0, encodedLength)
 
             return encodedData.toString()
         }
@@ -465,8 +474,9 @@ class Obfuscation {
             val extra3 = encodePokemons(profile.pokes)
             val extra4 = encodeInventory(GenericKeyValue.convertItems(profile.items))
 
-            //                                              extra3[0], probably not identical to it
-            val extra5 = convertIntToString(createCheckSum("${extra3.first}${profile.currentSave}"))
+            val extra5 = convertIntToString(
+                //                           extra3[0], probably not identical to it
+                createCheckSum("${extra3.first}${profile.currentSave}"))
 
             encodedData.add(extra.toString())
             encodedData.add(extra2)
@@ -511,7 +521,7 @@ private fun CharIterator.nextX(x: Int): Array<Char> {
     //  can be over but must not fail
     val chars = arrayListOf<Char>()
 
-    for (i in 0..x) {
+    for (i in 0..<x) {
         if (!hasNext()) break
 
         chars.add(nextChar())
@@ -532,5 +542,3 @@ private fun CharIterator.nextVariable(variableLength: Boolean = true) : Int {
     val length = Obfuscation.convertStringToInt(nextXString(lengthOfLength))
     return Obfuscation.convertStringToInt(nextXString(length))
 }
-
-private inline fun <reified T> castOrNull(from: Any) : T? = from as? T?

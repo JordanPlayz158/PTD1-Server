@@ -1,9 +1,9 @@
-package xyz.jordanplayz158.ptd1.server.orm
+package xyz.jordanplayz158.ptd.module.ptd1.orm
 
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import xyz.jordanplayz158.ptd1.server.Achievements
+import xyz.jordanplayz158.ptd.module.ptd1.Achievements
 
 class Achievement(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<Achievement>(Achievements)

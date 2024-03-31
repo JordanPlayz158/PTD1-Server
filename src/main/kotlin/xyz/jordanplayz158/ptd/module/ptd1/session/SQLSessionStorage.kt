@@ -1,9 +1,9 @@
-package xyz.jordanplayz158.ptd1.server.session
+package xyz.jordanplayz158.ptd.module.ptd1.session
 
-import io.ktor.server.sessions.SessionStorage
+import io.ktor.server.sessions.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import xyz.jordanplayz158.ptd1.server.Sessions
-import xyz.jordanplayz158.ptd1.server.orm.Session
+import xyz.jordanplayz158.ptd.module.ptd1.Sessions
+import xyz.jordanplayz158.ptd.module.ptd1.orm.Session
 
 class SQLSessionStorage : SessionStorage {
     override suspend fun invalidate(id: String) {

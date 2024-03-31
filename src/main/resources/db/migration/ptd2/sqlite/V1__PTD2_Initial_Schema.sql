@@ -81,5 +81,5 @@ CREATE TABLE `1v1s` (
 
     CONSTRAINT UQ_1v1s_account_id_num UNIQUE(account_id, num),
     CONSTRAINT FK_1v1s_account_id_accounts_id FOREIGN KEY(account_id)
-        REFERENCES accounts (id)
+        REFERENCES accounts (id) ON DELETE CASCADE
 );

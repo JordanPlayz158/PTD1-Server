@@ -1,25 +1,14 @@
-package xyz.jordanplayz158.ptd1.server
+package xyz.jordanplayz158.ptd
 
-import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.cdimascio.dotenv.dotenv
-import io.ktor.http.ContentType
-import io.ktor.http.formUrlEncode
-import io.ktor.server.application.call
-import io.ktor.server.application.install
-import io.ktor.server.application.log
-import io.ktor.server.cio.CIO
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.http.content.staticFiles
-import io.ktor.server.request.receiveParameters
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.post
-import io.ktor.server.routing.route
-import io.ktor.server.routing.routing
-import io.ktor.server.sessions.Sessions
-import io.ktor.server.sessions.cookie
-import io.ktor.server.thymeleaf.Thymeleaf
-import io.ktor.server.webjars.Webjars
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
+import io.ktor.server.routing.*
+import io.ktor.server.thymeleaf.*
+import io.ktor.server.webjars.*
 import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -30,16 +19,13 @@ import org.thymeleaf.context.IWebContext
 import org.thymeleaf.linkbuilder.StandardLinkBuilder
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
 import org.thymeleaf.templateresolver.FileTemplateResolver
-import xyz.jordanplayz158.ptd.ResultsEnum
-import xyz.jordanplayz158.ptd.databaseConfig
-import xyz.jordanplayz158.ptd.getCorrectFile
-import xyz.jordanplayz158.ptd1.server.controller.SWFController
 import xyz.jordanplayz158.ptd.migration.SQLMigration
-import xyz.jordanplayz158.ptd1.server.orm.Setting
-import xyz.jordanplayz158.ptd1.server.session.SQLSessionStorage
-import xyz.jordanplayz158.ptd1.server.session.UserSession
-import java.io.File
-import java.util.Locale
+import xyz.jordanplayz158.ptd.module.ptd1.FirstRunDatabaseMigrationPlugin
+import xyz.jordanplayz158.ptd.module.ptd1.Settings
+import xyz.jordanplayz158.ptd.module.ptd1.orm.Setting
+import xyz.jordanplayz158.ptd.module.ptd1.ptd1
+import xyz.jordanplayz158.ptd2.server.ptd2
+import java.util.*
 import kotlin.concurrent.thread
 
 val dotenv = dotenv()
@@ -53,7 +39,7 @@ fun main() {
     val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
 
     embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
-        SQLMigration(dataSource.connection, getCorrectFile("db/migration/ptd1/$databaseServer", developmentMode))
+        SQLMigration(dataSource.connection, getCorrectFile("db/migration/ptd/$databaseServer", developmentMode))
 
         val database = Database.connect(dataSource)
 
@@ -72,9 +58,9 @@ fun main() {
             path = "assets"
         }
 
-        install(Sessions) {
-            cookie<UserSession>("ptd1_session", SQLSessionStorage())
-        }
+//        install(Sessions) {
+//            cookie<UserSession>("ptd1_session", SQLSessionStorage())
+//        }
 
         install(Thymeleaf) {
             addDialect(LayoutDialect())
@@ -145,51 +131,16 @@ fun main() {
 
         routing {
             staticFiles("/", getCorrectFile("static", developmentMode))
+        }
 
-            route("/php") {
-                post("/newPoke8.php") {
-                    val parameters = call.receiveParameters()
+        if (dotenv["ENABLE_PTD1"].toBoolean()) {
+            SQLMigration(dataSource.connection, getCorrectFile("db/migration/ptd1/$databaseServer", developmentMode))
+            ptd1()
+        }
 
-                    val action = parameters["Action"]
-                    val email = parameters["Email"]
-                    val password = parameters["Pass"]
-                    val ver = parameters["Ver"]
-                    if (action == null || email == null || password == null || ver == null) {
-                        call.respondText(
-                            listOf(
-                                "Result" to ResultsEnum.FAILURE.id,
-                                "Reason" to "NotAllParametersSupplied"
-                            ).formUrlEncode(), ContentType.Application.FormUrlEncoded
-                        )
-                        return@post
-                    }
-
-                    when (action) {
-                        "createAccount" -> call.respondText(
-                            SWFController.createAccount(
-                                email,
-                                password
-                            ).second.formUrlEncode(), ContentType.Application.FormUrlEncoded
-                        )
-
-                        "loadAccount" -> call.respondText(
-                            SWFController.loadAccount(
-                                email,
-                                password
-                            ).second.formUrlEncode(), ContentType.Application.FormUrlEncoded
-                        )
-
-                        "saveAccount" -> call.respondText(
-                            SWFController.saveAccount(
-                                call.application.log,
-                                email,
-                                password,
-                                parameters
-                            ).second.formUrlEncode(), ContentType.Application.FormUrlEncoded
-                        )
-                    }
-                }
-            }
+        if (dotenv["ENABLE_PTD2"].toBoolean()) {
+            SQLMigration(dataSource.connection, getCorrectFile("db/migration/ptd2/$databaseServer", developmentMode))
+            ptd2()
         }
 
         Runtime.getRuntime().addShutdownHook(thread(start = false) {

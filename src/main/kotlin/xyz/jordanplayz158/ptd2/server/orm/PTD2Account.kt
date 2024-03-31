@@ -19,7 +19,6 @@ class PTD2Account(id: EntityID<Long>) : LongEntity(id) {
     var dex5 by Accounts.dex5
     var dex6 by Accounts.dex6
 
-    // TODO: Find out a way to get exposed (or kotlin) to identify the field as nullable
-    val stories by PTD2Story optionalReferrersOn Stories.account
-    val oneV1 by PTD2OneV1 optionalReferrersOn OneV1S.account
+    val stories by PTD2Story referrersOn Stories.account
+    val oneV1 by PTD2OneV1 referrersOn OneV1S.account
 }

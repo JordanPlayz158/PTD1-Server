@@ -67,11 +67,7 @@ class SQLMigration(private val connection: Connection, migrationDirectory: File)
 
             val rowsModified = statement.executeUpdate("INSERT INTO migrations VALUES ('${file.name}')")
 
-            if (rowsModified == 1) {
-                return true
-            }
-
-            return false
+            return rowsModified == 1
         }
     }
 }

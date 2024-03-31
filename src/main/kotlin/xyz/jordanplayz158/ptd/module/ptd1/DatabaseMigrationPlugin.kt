@@ -1,34 +1,39 @@
-package xyz.jordanplayz158.ptd1.server
+package xyz.jordanplayz158.ptd.module.ptd1
 
-import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.ApplicationStopPreparing
-import io.ktor.server.application.createApplicationPlugin
-import io.ktor.server.application.log
-import io.ktor.server.engine.ApplicationEngineEnvironment
-import io.ktor.server.request.httpMethod
-import io.ktor.server.request.receiveParameters
-import io.ktor.server.request.uri
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
-import io.ktor.server.sessions.sessions
-import io.ktor.server.thymeleaf.ThymeleafContent
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.thymeleaf.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import xyz.jordanplayz158.ptd1.server.csrf.csrfMapOf
-import xyz.jordanplayz158.ptd1.server.orm.Setting
+import xyz.jordanplayz158.ptd.dataSource
+import xyz.jordanplayz158.ptd.module.ptd1.orm.Setting
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.lang.NumberFormatException
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.Timestamp
 import java.time.Instant
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.arrayListOf
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.filter
+import kotlin.collections.first
+import kotlin.collections.forEach
+import kotlin.collections.iterator
+import kotlin.collections.listOf
+import kotlin.collections.mapOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.toMutableList
 import kotlin.math.min
 import kotlin.system.exitProcess
 
@@ -44,7 +49,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
             return@onCall
 
         if(call.request.httpMethod === HttpMethod.Get) {
-            call.respond(ThymeleafContent("databaseMigration/index", csrfMapOf(call.sessions)))
+            call.respond(ThymeleafContent("databaseMigration/index", mapOf()/*, csrfMapOf(call.sessions)*/))
             return@onCall
         }
 

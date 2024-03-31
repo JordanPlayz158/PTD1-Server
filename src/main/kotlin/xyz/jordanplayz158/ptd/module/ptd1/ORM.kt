@@ -1,4 +1,4 @@
-package xyz.jordanplayz158.ptd1.server
+package xyz.jordanplayz158.ptd.module.ptd1
 
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.javatime.timestamp

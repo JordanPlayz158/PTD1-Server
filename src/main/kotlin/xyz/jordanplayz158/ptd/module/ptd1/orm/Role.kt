@@ -1,9 +1,9 @@
-package xyz.jordanplayz158.ptd1.server.orm
+package xyz.jordanplayz158.ptd.module.ptd1.orm
 
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import xyz.jordanplayz158.ptd1.server.Roles
+import xyz.jordanplayz158.ptd.module.ptd1.Roles
 
 class Role(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<Role>(Roles)

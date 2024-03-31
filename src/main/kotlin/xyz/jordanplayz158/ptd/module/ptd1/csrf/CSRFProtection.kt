@@ -1,12 +1,9 @@
-package xyz.jordanplayz158.ptd1.server.csrf
+package xyz.jordanplayz158.ptd.module.ptd1.csrf
 
-import io.ktor.server.application.createApplicationPlugin
-import io.ktor.server.application.hooks.CallSetup
-import io.ktor.server.sessions.CurrentSession
-import io.ktor.server.sessions.get
-import io.ktor.server.sessions.sessions
-import io.ktor.server.sessions.set
-import xyz.jordanplayz158.ptd1.server.session.UserSession
+import io.ktor.server.application.*
+import io.ktor.server.application.hooks.*
+import io.ktor.server.sessions.*
+import xyz.jordanplayz158.ptd.module.ptd1.session.UserSession
 import java.security.SecureRandom
 import kotlin.random.Random
 

@@ -14,21 +14,17 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Testcontainers
 import xyz.jordanplayz158.ptd.getCorrectFile
-import xyz.jordanplayz158.ptd1.server.controller.SWFController
 import xyz.jordanplayz158.ptd.migration.SQLMigration
-import xyz.jordanplayz158.ptd1.server.Users
-import xyz.jordanplayz158.ptd1.server.orm.Pokemon
-import xyz.jordanplayz158.ptd1.server.orm.User
+import xyz.jordanplayz158.ptd.module.ptd1.Users
+import xyz.jordanplayz158.ptd.module.ptd1.controller.SWFController
+import xyz.jordanplayz158.ptd.module.ptd1.orm.Pokemon
+import xyz.jordanplayz158.ptd.module.ptd1.orm.User
 import xyz.jordanplayz158.ptd2.server.controller.PTD2SWFController
 import java.io.File
 import java.sql.Connection
-import java.util.Locale
+import java.util.*
 import kotlin.random.Random
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 @Testcontainers
 class MigrationTest {
