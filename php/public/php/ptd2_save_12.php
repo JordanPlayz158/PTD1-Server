@@ -6,6 +6,9 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST')
     exit();
 }
 
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+//ini_set('display_errors', 0);
+
 if(isset($_POST['debug']))
 {
     error_reporting(E_ALL);
@@ -24,27 +27,22 @@ else
     require_once '../../json.php';
 }
 
-function create_account($email, $pass)//: string
+function create_account($email, $pass): string
 {
     if (account_exists($email))
     {
         return 'Result=Failure&Reason=taken';
     }
 
-    require_once '../../PasswordHash.php';
-    $hasher = new PasswordHash(8, FALSE);
-
     $account = ['email' => $email,
-//      'pass' => password_hash($pass, PASSWORD_DEFAULT)
-      'pass' => $hasher->HashPassword($pass)
+      'pass' => password_hash($pass, PASSWORD_DEFAULT)
     ];
     create_new_account($account);
     return load_account($email, $pass);
 }
 
-function load_account($email, $pass)//: string
+function load_account($email, $pass): string
 {
-    require_once '../../PasswordHash.php';
     if (authenticate_account($email, $pass))
     {
         return 'Result=Success&Reason=loadedAccount&p=1'; // Trainer pass for everyone!
@@ -53,7 +51,7 @@ function load_account($email, $pass)//: string
 }
 
 
-function load_story($email, $pass)//: string
+function load_story($email, $pass): string
 {
     $story = get_story($email, $pass);
     if ($story)
@@ -80,7 +78,7 @@ function load_story($email, $pass)//: string
     return 'Result=Success&extra=ycm';
 }
 
-function load_story_profile($email, $pass)//: string
+function load_story_profile($email, $pass): string
 {
     $result = '';
     $whichProfile = $_POST['whichProfile'];
@@ -103,7 +101,7 @@ function load_story_profile($email, $pass)//: string
     return 'Result=Failure&Reason=NotFound';
 }
 
-function save_story($email, $pass)//: string
+function save_story($email, $pass): string
 {
     $new_data = array();
     $whichProfile = $_POST['whichProfile'];
@@ -178,7 +176,7 @@ function save_story($email, $pass)//: string
     return 'Result=Failure&Reason=NotFound';
 }
 
-function delete_story(string $email, string $pass)//: string
+function delete_story(string $email, string $pass): string
 {
     $whichProfile = $_POST['whichProfile'];
     if (delete_profile($email, $pass, 'story', "profile{$whichProfile}")) {
@@ -198,7 +196,7 @@ function load_1v1($email, $pass)
     return 'Result=Success&extra=ycm&extra2=yqym';
 }
 
-function save_1v1($email, $pass)//: string
+function save_1v1($email, $pass): string
 {
     $whichProfile = $_POST['whichProfile'];
     $new_data['1v1']["profile{$whichProfile}"] = decode_1v1($_POST['extra']);
@@ -209,7 +207,7 @@ function save_1v1($email, $pass)//: string
     return 'Result=Failure&Reason=NotFound';
 }
 
-function delete_1v1(string $email, string $pass)//: string
+function delete_1v1(string $email, string $pass): string
 {
     $whichProfile = $_POST['whichProfile'];
     delete_profile($email, $pass, '1v1', "profile{$whichProfile}");

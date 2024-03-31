@@ -11,7 +11,7 @@ else
 
 const letterList = ['m', 'y', 'w', 'c', 'q', 'a', 'p', 'r', 'e', 'o'];
 
-function convertToString(int $param1)//: string
+function convertToString(int $param1): string
 {
     if ($param1 < count(letterList))
     {
@@ -20,7 +20,7 @@ function convertToString(int $param1)//: string
     return '-1';
 }
 
-function convertToInt(string $param1)//: string
+function convertToInt(string $param1): string
 {
     for ($i = 0; $i < count(letterList); $i++)
     {
@@ -32,7 +32,7 @@ function convertToInt(string $param1)//: string
     return '-1';
 }
 
-function convertStringToIntString(string $param1)//: string
+function convertStringToIntString(string $param1): string
 {
     $loc3 = '';
     for ($i = 0; $i < strlen($param1); $i++)
@@ -47,7 +47,7 @@ function convertStringToIntString(string $param1)//: string
     return $loc3;
 }
 
-function convertStringToInt(string $param1)//: int
+function convertStringToInt(string $param1): int
 {
     return (int) convertStringToIntString($param1);
 }
@@ -68,7 +68,7 @@ function convertIntToString(int $num)
     return $result;
 }
 
-function get_Length(int $param1, int $param2)//: string
+function get_Length(int $param1, int $param2): string
 {
     $loc3 = $param1 + $param2 + 1;
     $loc5 = "$loc3";
@@ -99,7 +99,7 @@ function create_Check_Sum(string $encoded_info)
     return $checksum * 3;
 }
 
-function decode_pokeinfo(string $encoded_pokeinfo, $email)//: array
+function decode_pokeinfo(string $encoded_pokeinfo, $email): array
 {
     $pokemons = array();
     $AvaliableSaveID = get_avaliable_saveID($email);
@@ -356,7 +356,7 @@ function encode_pokemons($pokemons)
     return [$encoded_pokes, $pokenicks];
 }
 
-function encode_inventory($items)//: string
+function encode_inventory($items): string
 {
     $encoded_items = '';
     $qnt = 0;
@@ -386,7 +386,7 @@ function encode_inventory($items)//: string
     return $encoded_items;
 }
 
-function decode_inventory(string $encoded_items)//: array
+function decode_inventory(string $encoded_items): array
 {
     $items = array();
     $pointer = 0;
@@ -409,13 +409,13 @@ function decode_inventory(string $encoded_items)//: array
     return $items;
 }
 
-function decode_extra(string $encoded_extra)//: array
+function decode_extra(string $encoded_extra): array
 {
     $extra = decode_inventory($encoded_extra);
     return $extra;
 }
 
-function decode_1v1(string $encoded_data)//: array
+function decode_1v1(string $encoded_data): array
 {
     $data = array();
 
@@ -436,7 +436,7 @@ function decode_1v1(string $encoded_data)//: array
     return $data;
 }
 
-function encode_1v1(array $profiles)//: string
+function encode_1v1(array $profiles): string
 {
     $encoded_data = '';
     $PA = 0;
@@ -464,7 +464,7 @@ function encode_1v1(array $profiles)//: string
     return $encoded_data;
 }
 
-function encode_story(array $story_data)//: string
+function encode_story(array $story_data): string
 {
     $encoded_data = '';
     $PA = 0;
@@ -496,7 +496,7 @@ function encode_story(array $story_data)//: string
     return $encoded_data;
 }
 
-function encode_story_profile(array $profile)//: array
+function encode_story_profile(array $profile): array
 {
     $encoded_data = array();
     $extra = '';
@@ -524,7 +524,7 @@ function encode_story_profile(array $profile)//: array
     return $encoded_data;
 }
 
-function get_badges(array $extra)//: int
+function get_badges(array $extra): int
 {
     $badges = 0;
     if (isset($extra[48]) && $extra[48] === 2)

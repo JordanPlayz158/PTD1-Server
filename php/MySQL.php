@@ -1,5 +1,6 @@
 <?php
-$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+global $DB_HOST, $DB_USER, $DB_PASS, $DB_NAME;
+$mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
 
 if($mysqli->connect_error) {
     echo 'Result=Failure&Reason=DatabaseConnection';
@@ -108,7 +109,7 @@ function account_exists(string $email)
     return $row;
 }
 
-function create_new_account(array $account)//: void
+function create_new_account(array $account): void
 {
     global $mysqli;
     $stmt = $mysqli->prepare('INSERT INTO accounts (email, pass) VALUES (?,?);');
@@ -117,7 +118,7 @@ function create_new_account(array $account)//: void
     $stmt->close();
 }
 
-function authenticate_account(string $email, string $pass)//: bool
+function authenticate_account(string $email, string $pass): bool
 {
     global $mysqli;
     $stmt = $mysqli->prepare('SELECT pass FROM accounts WHERE email=?');
@@ -126,9 +127,12 @@ function authenticate_account(string $email, string $pass)//: bool
     $result = $stmt->get_result();
     $stmt->close();
     $row = $result->fetch_assoc();
-    require_once '../../PasswordHash.php';
-    $hasher = new PasswordHash(8, FALSE);
-    return $hasher->CheckPassword($pass, $row['pass']);
+
+    if ($row == null) {
+      return false;
+    }
+
+    return password_verify($pass, $row['pass']);
 }
 
 function get_story($email, $pass)
@@ -457,7 +461,7 @@ function update_account_data($email, $pass, $new_data)
         array_push($save_params['values'], $email);
         array_push($save_params['values'], $whichProfile);
         // PHP 5 compatible
-        $save_stmt->bind_param($save_params['types'], /*...*/$save_params['values']);
+        $save_stmt->bind_param($save_params['types'], ...$save_params['values']);
         $save_stmt->execute();
         $save_stmt->close();
     } else if (isset($new_data['1v1']))
@@ -488,9 +492,9 @@ function get_1v1($email)
     $versus_stmt = $mysqli->prepare('SELECT money, levelUnlocked, num FROM 1v1 WHERE email=?');
     $versus_stmt->bind_param('s', $email);
     $versus_stmt->execute();
-    while ($result = $versus_stmt->get_result())
+    $result = $versus_stmt->get_result();
+    while ($profile = $result->fetch_assoc())
     {
-        $profile = $result->fetch_assoc();
         if ($profile)
         {
             $profiles["profile{$profile['num']}"] = $profile;
@@ -500,12 +504,11 @@ function get_1v1($email)
     return $profiles;
 }
 
-function get_avaliable_saveID($email)//: int
+function get_avaliable_saveID($email): int
 {
-    global $mysqli;
-    $db_name = DB_NAME;
+    global $mysqli, $DB_NAME;
     $stmt = $mysqli->prepare('SELECT AUTO_INCREMENT FROM information_schema.tables WHERE table_name="pokes" AND table_schema=?');
-    $stmt->bind_param('s', $db_name);
+    $stmt->bind_param('s', $DB_NAME);
     $stmt->execute();
     $result = $stmt->get_result();
     $stmt->close();

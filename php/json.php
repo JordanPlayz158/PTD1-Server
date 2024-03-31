@@ -1,5 +1,5 @@
 <?php
-function account_exists($email)//: bool
+function account_exists($email): bool
 {
     $accounts = get_accounts();
     foreach ($accounts as $account)
@@ -12,14 +12,12 @@ function account_exists($email)//: bool
     return false;
 }
 
-function authenticate_account($email, $pass)//: bool
+function authenticate_account($email, $pass): bool
 {
     $accounts = get_accounts();
     foreach ($accounts as $account)
     {
-        $hasher = new PasswordHash(8, FALSE);
-
-        if ($account['email'] === $email && $hasher->CheckPassword($pass, $account['pass']))
+        if ($account['email'] === $email && password_verify($pass, $account['pass']))
         {
             return true;
         }
@@ -31,12 +29,9 @@ function get_account($email, $pass)
 {
     $accounts = get_accounts();
 
-    require_once '../../PasswordHash.php';
-    $hasher = new PasswordHash(8, FALSE);
-
     foreach ($accounts as $account)
     {
-        if ($account['email'] === $email && $hasher->CheckPassword($pass, $account['pass']))
+        if ($account['email'] === $email && password_verify($pass, $account['pass']))
         {
             return $account;
         }
@@ -44,7 +39,7 @@ function get_account($email, $pass)
     return null;
 }
 
-function get_accounts()//: array
+function get_accounts(): array
 {
     $accounts_file = '../../accounts.json';
     $accounts = array();
@@ -56,16 +51,13 @@ function get_accounts()//: array
     return $accounts;
 }
 
-function update_account_data($email, $pass, $new_data)//: bool
+function update_account_data($email, $pass, $new_data): bool
 {
     $accounts = get_accounts();
 
-    require_once '../../PasswordHash.php';
-    $hasher = new PasswordHash(8, FALSE);
-
     foreach ($accounts as $index => $account)
     {
-        if ($account['email'] === $email && $hasher->CheckPassword($pass, $account['pass']))
+        if ($account['email'] === $email && password_verify($pass, $account['pass']))
         {
             $accounts[$index] = array_replace_recursive($accounts[$index], $new_data);
             $data = json_encode($accounts);
@@ -76,17 +68,13 @@ function update_account_data($email, $pass, $new_data)//: bool
     return false;
 }
 
-function delete_profile($email, $pass, $game_mode, $profile)//: bool
+function delete_profile($email, $pass, $game_mode, $profile): bool
 {
     $accounts = get_accounts();
 
-    require_once '../../PasswordHash.php';
-    $hasher = new PasswordHash(8, FALSE);
-
-
     foreach ($accounts as $index => $account)
     {
-        if ($account['email'] === $email && $hasher->CheckPassword($pass, $account['pass']))
+        if ($account['email'] === $email && password_verify($pass, $account['pass']))
         {
             unset($accounts[$index][$game_mode][$profile]);
             $data = json_encode($accounts);
