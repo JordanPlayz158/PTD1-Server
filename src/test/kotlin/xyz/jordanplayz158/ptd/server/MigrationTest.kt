@@ -4,6 +4,7 @@ import com.github.dockerjava.api.command.CreateContainerCmd
 import com.github.dockerjava.api.model.Ulimit
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.ktor.http.*
 import org.jetbrains.exposed.dao.with
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -13,13 +14,15 @@ import org.testcontainers.containers.MariaDBContainer
 import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Testcontainers
-import xyz.jordanplayz158.ptd.getCorrectFile
-import xyz.jordanplayz158.ptd.migration.SQLMigration
-import xyz.jordanplayz158.ptd.module.ptd1.Users
-import xyz.jordanplayz158.ptd.module.ptd1.controller.SWFController
-import xyz.jordanplayz158.ptd.module.ptd1.orm.Pokemon
-import xyz.jordanplayz158.ptd.module.ptd1.orm.User
-import xyz.jordanplayz158.ptd2.server.controller.PTD2SWFController
+import xyz.jordanplayz158.ptd.server.common.orm.User
+import xyz.jordanplayz158.ptd.server.common.orm.Users
+import xyz.jordanplayz158.ptd.server.module.ptd1.controller.PTD1SWFController
+import xyz.jordanplayz158.ptd.server.module.ptd1.orm.PTD1Pokemon
+import xyz.jordanplayz158.ptd.server.module.ptd1.orm.PTD1User
+import xyz.jordanplayz158.ptd.server.module.ptd2.controller.PTD2SWFController
+import xyz.jordanplayz158.ptd.server.migration.SQLMigration
+import xyz.jordanplayz158.ptd.server.module.ptd1.orm.PTD1Users
+import xyz.jordanplayz158.ptd.server.module.ptd3.controller.PTD3SWFController
 import java.io.File
 import java.sql.Connection
 import java.util.*
@@ -40,20 +43,20 @@ class MigrationTest {
 
     @Test
     fun testSqLiteMigration() {
-        // Can't figure out why it is broken but all others seem to work?
-        //  so could be a bug in something sqlite specific
-        sqlite(1)
-        sqlite(2)
-    }
-
-    private fun sqlite(ptd: Int) {
-        val dbFile = File(tempDir, "$DATABASE$ptd.db")
+        val dbFile = File(tempDir, "$DATABASE.db")
         println("SQLite: $dbFile")
 
         val config = HikariConfig()
         config.jdbcUrl = "jdbc:sqlite:$dbFile"
         val dataSource = HikariDataSource(config)
 
+        migration(dataSource.connection, 0)
+        sqlite(dataSource, 1)
+        sqlite(dataSource, 2)
+        sqlite(dataSource, 3)
+    }
+
+    private fun sqlite(dataSource: HikariDataSource, ptd: Int) {
         migration(dataSource.connection, ptd)
 
         Database.connect(dataSource)
@@ -73,8 +76,10 @@ class MigrationTest {
 
         mariaDbContainer.start()
 
+        migration(dataSource(mariaDbContainer.jdbcUrl).connection, 0)
         testContainers(mariaDbContainer.jdbcUrl, 1)
-        //testContainers(mariaDbContainer.jdbcUrl, 2)
+        testContainers(mariaDbContainer.jdbcUrl, 2)
+        testContainers(mariaDbContainer.jdbcUrl, 3)
     }
 
     @Test
@@ -93,8 +98,10 @@ class MigrationTest {
 
         mySqlContainer.start()
 
+        migration(dataSource(mySqlContainer.jdbcUrl).connection, 0)
         testContainers(mySqlContainer.jdbcUrl, 1)
-        //testContainers(mariaDbContainer.jdbcUrl, 2)
+        testContainers(mySqlContainer.jdbcUrl, 2)
+        testContainers(mySqlContainer.jdbcUrl, 3)
     }
 
     @Test
@@ -106,51 +113,77 @@ class MigrationTest {
 
         postgreSqlContainer.start()
 
+        migration(dataSource(postgreSqlContainer.jdbcUrl).connection, 0)
         testContainers(postgreSqlContainer.jdbcUrl, 1)
-        //testContainers(mariaDbContainer.jdbcUrl, 2)
+        testContainers(postgreSqlContainer.jdbcUrl, 2)
+        testContainers(postgreSqlContainer.jdbcUrl, 3)
     }
 
     private fun testContainers(url: String, ptd: Int) {
-        val config = HikariConfig()
-        config.jdbcUrl = url
-        config.username = USERNAME
-        config.password = PASSWORD
-
-        val dataSource = HikariDataSource(config)
+        val dataSource = dataSource(url)
         migration(dataSource.connection, ptd)
 
         Database.connect(dataSource)
         accountTest(ptd)
     }
 
+    fun dataSource(url: String): HikariDataSource {
+        val config = HikariConfig()
+        config.jdbcUrl = url
+        config.username = USERNAME
+        config.password = PASSWORD
+
+        return HikariDataSource(config)
+    }
+
     private fun migration(connection: Connection, ptd: Int) {
         val databaseServer = connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
-        SQLMigration(connection, getCorrectFile("db/migration/ptd$ptd/$databaseServer", true))
+
+        val path = getCorrectFile("db/migration/ptd" + when (ptd) {
+            0 -> {
+                "/$databaseServer"
+            }
+            else -> {
+                "$ptd/$databaseServer"
+            }
+        }, true)
+
+
+        SQLMigration(connection, path)
     }
 
     private fun accountTest(ptd: Int) {
          when (ptd) {
             1 -> {
                 // Make account
-                assertTrue(SWFController.createAccount("test", "test").first)
+                val successResult = PTD1SWFController.createAccount("test", "test")
+                    .formUrlEncode().parseUrlEncodedParameters()
+
+                assertEquals("Success", successResult["Result"])
+
                 // Try to make it again, should fail due to account existing check
-                assertFalse(SWFController.createAccount("test", "test").first)
+                val failureResult = PTD1SWFController.createAccount("test", "test")
+                    .formUrlEncode().parseUrlEncodedParameters()
+
+                assertEquals("Failure", failureResult["Result"])
+
 
                 transaction {
-                    val user = User.find(Users.email eq "test").with(User::saves).firstOrNull()
-                    assertNotNull(user)
+                    val user = User.find(Users.email eq "test").first()
+                    val ptd1User = PTD1User.find(PTD1Users.user eq user.id).with(PTD1User::saves).firstOrNull()
+                    assertNotNull(ptd1User)
 
-                    assertEquals(1, user.achievement.count())
-                    assertEquals(3, user.saves.count())
+                    assertEquals(1, ptd1User.achievement.count())
+                    assertEquals(3, ptd1User.saves.count())
 
-                    val saves = user.saves
+                    val saves = ptd1User.saves
 
                     // Update save entries and add some pokemon
                     for(saveNumber in 0..2) {
                         val save = saves.filter { save -> save.number.toInt() == saveNumber }[0]
 
                         for(i in 1..5) {
-                            Pokemon.new {
+                            PTD1Pokemon.new {
                                 this.save = save.id
                                 swfId = (save.pokemon.maxByOrNull { pokemon -> pokemon.swfId }?.swfId ?: 0) + 1
                                 number = Random.nextInt(1, 152).toShort()
@@ -165,10 +198,23 @@ class MigrationTest {
                 }
             }
             2 -> {
-                // Make account
-                assertTrue(PTD2SWFController.createAccount("test", "test").first)
-                // Try to make it again, should fail due to account existing check
-                assertFalse(PTD2SWFController.createAccount("test", "test").first)
+                val successResult = PTD2SWFController.createAccount("test", "test")
+                    .formUrlEncode().parseUrlEncodedParameters()
+
+                assertEquals("Success", successResult["Result"])
+
+                val failureResult = PTD2SWFController.createAccount("test", "test")
+                    .formUrlEncode().parseUrlEncodedParameters()
+
+                assertEquals("Failure", failureResult["Result"])
+            }
+
+            3 -> {
+                // PTD3 uses the common user entity so this should fail as PTD1 made PTD common user entry
+                val failureResult = PTD3SWFController.createAccount("test", "test")
+                    .formUrlEncode().parseUrlEncodedParameters()
+
+                assertEquals("Failure", failureResult["Result"])
             }
             else -> throw RuntimeException("Invalid ptd value '$ptd'")
         }

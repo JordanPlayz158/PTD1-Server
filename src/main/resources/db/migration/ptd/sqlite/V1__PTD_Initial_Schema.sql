@@ -3,21 +3,34 @@
 -- add role_privileges table (id, role_id, privilege_id)
 --   each row will be a privilege the role has
 CREATE TABLE roles (
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL,
+    id TINYINT(3) NOT NULL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
 
 INSERT INTO roles (id, name)
-VALUES (1, 'User'), (2, 'Admin');
+VALUES (1, 'Admin'), (100, 'User');
 
+CREATE TABLE users (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    -- SWF max length of 50
+    email VARCHAR(50) NOT NULL UNIQUE,
+    role_id TINYINT(3) NOT NULL DEFAULT 100,
+    -- SWF max length of 10
+    -- But Bcrypt hashing has size of 72
+    password VARCHAR(72) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
 
--- Make unified user table
+    CONSTRAINT FK_users_role_id_roles_id FOREIGN KEY (role_id)
+        REFERENCES roles(id)
+);
 
 CREATE TABLE sessions (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    sessionId VARCHAR(255) NOT NULL UNIQUE,
+    -- ensure it is indeed 32 characters
+    session_id VARCHAR(32) NOT NULL UNIQUE,
     data TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
@@ -31,7 +44,3 @@ CREATE TABLE settings (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
-
-
-INSERT INTO settings(id, `key`, value)
-VALUES(1, "DB_MIGRATION_ASKED", "FALSE");

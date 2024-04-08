@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "PTD3-Server"
+version = "0.0.1"
+authors = [
+  { name="etrotta", email="etrotta@duck.com" },
+]
+description = "A server built to make PTD3 playable again."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/etrotta/PTD3-SERVER"

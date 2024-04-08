@@ -1,0 +1,15 @@
+body {
+    background-color: rgb(47, 49, 54);
+    color: rgb(220, 220, 220);
+    text-align: left;
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+a {
+    color: rgb(0, 175, 244);
+}
+
+h1 {
+    text-align: center;
+}

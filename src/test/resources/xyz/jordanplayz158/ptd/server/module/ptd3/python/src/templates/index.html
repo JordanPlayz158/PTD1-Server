@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PTD3 Server Setup</title>
+    <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet">
+</head>
+<body>
+    <h1>Setting Up</h1>
+
+    <p>To play PTD3 using a personal server, you must:</p>
+    <ol>
+        <li>Create a Deta Account and install the Server on it (If you are here, this step is already done)</li>
+        <li>
+            Create an API Key for the App on your <a href="https://deta.space/">Space Canvas</a>
+            <ol>
+                <li>Go the Space Canvas</li>
+                <li>Find the PTD3-SERVER App</li>
+                <li>Click the (...) and open Settings</li>
+                <li>Go to the Keys tab and scroll down to API Keys</li>
+                <li>Create an API Key. Name it whatever you want ; Make sure to save it somewhere.</li>
+            </ol>
+        </li>
+        <li>
+            Download the <a href="">modified SWF for PTD3</a>
+            and a <a href="https://www.newgrounds.com/flash/player">Flash Player</a> if you do not have one yet.
+            If the above links do not work, please check if there is more information (e.g. updates or new links) mentioned in the <a href="https://github.com/etrotta/PTD3-SERVER#Links">GitHub page</a>.
+            If you are a programmer and wish to make your own 'fork' of the client, you can download
+            <a href="{{url_for('static', filename='mod_instructions.txt')}}">the instructions to modify it yourself here</a>.
+        </li>
+        <li>
+            Once you have the server, a flash player and the SWF file, open the SWF file or load it from the player.
+            After the game opens, you'll have to use the following as your login:
+            <ul>
+                <li>Server URL: The link to this server (https://something.deta.app/), with <code>/ptd3save/username</code> as the path</li>
+                The url to this server should start with something like <code>[ptd3server-small number-random sequence of characters]</code>.
+                Make sure you copy paste yours!<br>
+                In the end, it should look something like https://ptd3server-1-abc123xyz.deta.app/ptd3save/shiro
+                <li>Server Password: The API Key you created previously</li>
+            </ul>
+        </li>
+    </ol>
+</body>
+</html>

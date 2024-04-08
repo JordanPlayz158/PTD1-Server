@@ -1,0 +1,25 @@
+These are the main modifications you have to do to make a normal PTD3 client compatible with the server:
+- Modify the text on the Login/Register screen. You must at least increase the Max Length for the password.
+- You might also want to rename:
+- - Email  -> Server URL (+ Account), e.g. https://ptd3server-1-noise.deta.app/ptd3save/bestbird
+- - Password -> Server API Key, e.g. JgpTobfD5y3SCrjLEW1sGGhSFvX8gAod
+- Modify the data sent on save related requests (code.sndgames.ptd3.screens -> screen_Main, popup_Story_*)
+- - Add the X-Space-App-Key header (which requires an added Import)
+- - You must use the 'Email' (Server URL) instead of poke.SERVER_URL on the network requests 
+- - The password on URLVariables is not required (but doesn't breaks anything either), but the Email is still required (for the Username).
+- - - If you're annoyed by me calling the URL 'Email' and including the username on it, you can separate it yourself
+      and pass it via `URLVariable.Account = username`, that way you can exclude the Email from the url variables
+
+For more detailed instructions, contact etrotta#3846 on Discord 
+(but I do expect for you to have some experience programming if you are seriously planning to make edits yourself)
+
+
+Potentially useful code bits:
+```
+import flash.net.URLRequestHeader;
+
+<request>.requestHeaders.push(new URLRequestHeader("X-Space-App-Key",password));
+```
+
+the email can be `email`, `account.email` or `account.playerAccount.myEmail` depending on context
+the password can be `password`, `account.password` or `account.playerAccount.myPass` depending on context

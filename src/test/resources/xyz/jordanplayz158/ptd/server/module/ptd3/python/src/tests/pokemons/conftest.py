@@ -1,0 +1,110 @@
+from pytest import fixture
+from src.models.pokemon import Pokemon
+
+@fixture(scope='module')
+def first_party():
+    "The 'test' player party after saving for the first time"
+    return dict(
+        pichu = Pokemon(
+            poke_save_id=1,
+            pokedex_num=172,
+            poke_exp=117,
+            poke_lvl=6,
+            move_1_id=22,
+            move_2_id=456,
+            move_3_id=3,
+            move_4_id=0,
+            targetting_type=1,
+            poke_gender=1,
+            poke_party_pos=0,
+            poke_extra=0,
+            poke_held_item=0,
+            poke_is_hacked_tag='n',
+            poke_selected_move=1,
+            poke_selected_ability=0,
+            poke_nickname='Pichu',
+        ),
+        rattata = Pokemon(
+            poke_save_id=2,
+            pokedex_num=19,
+            poke_exp=18,
+            poke_lvl=4,
+            move_1_id=1,
+            move_2_id=3,
+            move_3_id=4,
+            move_4_id=0,
+            targetting_type=1,
+            poke_gender=1,
+            poke_party_pos=1,
+            poke_extra=0,
+            poke_held_item=0,
+            poke_is_hacked_tag='n',
+            poke_selected_move=3,
+            poke_selected_ability=0,
+            poke_nickname='Rattata',
+        )
+    )
+
+
+@fixture(scope='module')
+def second_party():
+    "The 'test' player party after saving for the second time"
+    return dict(
+        pichu = Pokemon(
+            poke_save_id=1,
+            pokedex_num=172,
+            poke_exp=121,
+            poke_lvl=7,
+            move_1_id=22,
+            move_2_id=456,
+            move_3_id=3,
+            move_4_id=0,
+            targetting_type=1,
+            poke_gender=1,
+            poke_party_pos=0,
+            poke_extra=0,
+            poke_held_item=0,
+            poke_is_hacked_tag='n',
+            poke_selected_move=3,
+            poke_selected_ability=0,
+            poke_nickname='Pichu',
+        ),
+        rattata = Pokemon(
+            poke_save_id=2,
+            pokedex_num=19,
+            poke_exp=42,
+            poke_lvl=6,
+            move_1_id=1,
+            move_2_id=3,
+            move_3_id=4,
+            move_4_id=0,
+            targetting_type=1,
+            poke_gender=1,
+            poke_party_pos=1,
+            poke_extra=0,
+            poke_held_item=0,
+            poke_is_hacked_tag='n',
+            poke_selected_move=3,
+            poke_selected_ability=0,
+            poke_nickname='Rattata',
+        ),
+        geodude = Pokemon(
+            poke_save_id=3,
+            pokedex_num=74,
+            poke_exp=0,
+            poke_lvl=4,
+            move_1_id=1,
+            move_2_id=25,
+            move_3_id=0,
+            move_4_id=0,
+            targetting_type=1,
+            poke_gender=2,
+            poke_party_pos=2,
+            poke_extra=0,
+            poke_held_item=0,
+            poke_is_hacked_tag='n',
+            poke_selected_move=2,
+            poke_selected_ability=0,
+            poke_nickname='Geodude',
+        ),
+    )

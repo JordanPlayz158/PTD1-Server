@@ -82,7 +82,7 @@ application {
     // files will be included in Git/VCS as a result (rather than auto-generating in GitLab CI)
     //applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true", "-agentlib:native-image-agent=config-output-dir=src/main/resources/META-INF/native-image")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
-    mainClass.set("xyz.jordanplayz158.ptd.PTDServerKt")
+    mainClass.set("xyz.jordanplayz158.ptd.server.PTDServerKt")
 }
 
 graalvmNative {
@@ -161,6 +161,9 @@ dependencies {
     runtimeOnly("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-dao:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version")
+
+    implementation("io.sentry:sentry:6.18.1")
+    api("me.nathanfallet.ktorx:ktor-sentry:2.3.0")
 
 
     testImplementation(kotlin("test"))
