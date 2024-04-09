@@ -3,10 +3,7 @@ package xyz.jordanplayz158.ptd.server.module.ptd1.orm
 import org.jetbrains.exposed.dao.LongEntity
 import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.LongIdTable
-import org.jetbrains.exposed.sql.javatime.timestamp
 import xyz.jordanplayz158.ptd.server.common.orm.LongIdTableWithTimestamps
-import java.time.Instant
 
 class PTD1Achievement(id: EntityID<Long>) : LongEntity(id) {
     companion object : LongEntityClass<PTD1Achievement>(PTD1Achievements)

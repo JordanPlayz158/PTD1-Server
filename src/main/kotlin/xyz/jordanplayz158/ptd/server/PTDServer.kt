@@ -23,14 +23,14 @@ import org.thymeleaf.context.IWebContext
 import org.thymeleaf.linkbuilder.StandardLinkBuilder
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
 import org.thymeleaf.templateresolver.FileTemplateResolver
-import xyz.jordanplayz158.ptd.server.migration.SQLMigration
 import xyz.jordanplayz158.ptd.server.common.FirstRunDatabaseMigrationPlugin
-import xyz.jordanplayz158.ptd.server.module.ptd1.ptd1
-import xyz.jordanplayz158.ptd.server.module.ptd2.ptd2
 import xyz.jordanplayz158.ptd.server.common.orm.Setting
 import xyz.jordanplayz158.ptd.server.common.orm.Settings
 import xyz.jordanplayz158.ptd.server.common.session.SQLSessionStorage
 import xyz.jordanplayz158.ptd.server.common.session.UserSession
+import xyz.jordanplayz158.ptd.server.migration.SQLMigration
+import xyz.jordanplayz158.ptd.server.module.ptd1.ptd1
+import xyz.jordanplayz158.ptd.server.module.ptd2.ptd2
 import xyz.jordanplayz158.ptd.server.module.ptd3.ptd3
 import java.io.File
 import java.util.*

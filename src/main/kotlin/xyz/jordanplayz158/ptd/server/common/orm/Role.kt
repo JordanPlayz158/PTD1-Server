@@ -2,8 +2,6 @@ package xyz.jordanplayz158.ptd.server.common.orm
 
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
-import org.jetbrains.exposed.dao.LongEntity
-import org.jetbrains.exposed.dao.LongEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 
 class Role(id: EntityID<Byte>) : Entity<Byte>(id) {

@@ -7,20 +7,8 @@ import xyz.jordanplayz158.ptd.server.common.*
 import xyz.jordanplayz158.ptd.server.module.ptd1.PTD1Keygen
 import xyz.jordanplayz158.ptd.server.module.ptd1.orm.*
 import java.time.Instant
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
-import kotlin.collections.List
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.contains
-import kotlin.collections.distinct
-import kotlin.collections.filter
-import kotlin.collections.find
-import kotlin.collections.firstOrNull
-import kotlin.collections.forEach
-import kotlin.collections.forEachIndexed
-import kotlin.collections.map
-import kotlin.collections.maxByOrNull
 import kotlin.collections.set
 
 class PTD1SWFController {

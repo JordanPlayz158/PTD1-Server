@@ -1,8 +1,6 @@
 package xyz.jordanplayz158.ptd.server.common
 
 import at.favre.lib.crypto.bcrypt.BCrypt
-import com.zaxxer.hikari.HikariConfig
-import io.github.cdimascio.dotenv.Dotenv
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -10,7 +8,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import xyz.jordanplayz158.ptd.server.common.orm.User
 import xyz.jordanplayz158.ptd.server.common.orm.Users
-import java.io.File
 
 fun passwordHash(password: String): String {
     return BCrypt.withDefaults().hashToString(12, password.toCharArray())

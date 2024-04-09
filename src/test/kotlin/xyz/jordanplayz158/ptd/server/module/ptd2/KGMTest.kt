@@ -9,7 +9,6 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.Database
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.BindMode
