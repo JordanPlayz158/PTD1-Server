@@ -4,9 +4,17 @@ import io.ktor.http.*
 import org.jetbrains.exposed.sql.SizedIterable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import xyz.jordanplayz158.ptd.server.common.*
+import xyz.jordanplayz158.ptd.server.common.ReasonsEnum
+import xyz.jordanplayz158.ptd.server.common.ResultsEnum
+import xyz.jordanplayz158.ptd.server.common.data.Pokemon
+import xyz.jordanplayz158.ptd.server.common.getOrCreateUser
+import xyz.jordanplayz158.ptd.server.common.getUser
+import xyz.jordanplayz158.ptd.server.common.obfuscation.Obfuscation
 import xyz.jordanplayz158.ptd.server.common.orm.User
-import xyz.jordanplayz158.ptd.server.module.ptd3.orm.*
+import xyz.jordanplayz158.ptd.server.module.ptd3.orm.PTD3Extra
+import xyz.jordanplayz158.ptd.server.module.ptd3.orm.PTD3Pokemon
+import xyz.jordanplayz158.ptd.server.module.ptd3.orm.PTD3Save
+import xyz.jordanplayz158.ptd.server.module.ptd3.orm.PTD3Saves
 import kotlin.random.Random
 import kotlin.random.nextInt
 
@@ -184,61 +192,58 @@ class PTD3SWFController {
                     save.money = Obfuscation.convertStringToInt(saveData["MA"]!!)
                 }
 
-                val pokes = Obfuscation.decodePokeInfo(parameters["extra3"]!!, save)
+                val pokes = decodePokeInfo(parameters["extra3"]!!, save)
 
-                for ((saveId, poke) in pokes) {
-                    val reasons = poke["reason"] as ArrayList<Int>
+                for (poke in pokes) {
+                    var pokemon = save.pokemons.firstOrNull { it.swfId == poke.saveId }
 
-                    var pokemon = save.pokemons.firstOrNull { it.swfId == saveId }
-
-                    val pokeNicknameNum = poke["needNickname"]
+                    val pokeNicknameNum = poke.needNickname
                     var nickname: String? = null
                     if (pokeNicknameNum !== null) {
                         nickname = saveData["PokeNick$pokeNicknameNum"]
-                        // Unset may be needed but.... probably not?
                     }
 
-                    for (reason in reasons) {
+                    for (reason in poke.reasons) {
                         when (reason) {
                             1 -> { // Captured
                                 pokemon = PTD3Pokemon.new {
                                     this.save = save.id
-                                    this.swfId = (poke["saveID"] as Int)
+                                    this.swfId = poke.saveId
                                     this.nickname = nickname!!
-                                    this.number = (poke["num"] as Int).toShort()
-                                    this.experience = (poke["xp"] as Int)
-                                    this.level = (poke["lvl"] as Int).toShort()
-                                    this.move1 = (poke["move1"] as Int).toShort()
-                                    this.move2 = (poke["move2"] as Int).toShort()
-                                    this.move3 = (poke["move3"] as Int).toShort()
-                                    this.move4 = (poke["move4"] as Int).toShort()
-                                    this.targetType = (poke["targetingType"] as Int).toByte()
-                                    this.gender = (poke["gender"] as Int).toByte()
-                                    this.position = (poke["pos"] as Int)
-                                    this.extra = (poke["extra"] as Int).toByte()
-                                    this.item = (poke["item"] as Int).toByte()
-                                    this.tag = (poke["tag"] as String)
+                                    this.number = poke.number!!.toShort()
+                                    this.experience = poke.experience!!
+                                    this.level = poke.level!!.toShort()
+                                    this.move1 = poke.moves!![0].toShort()
+                                    this.move2 = poke.moves[1].toShort()
+                                    this.move3 = poke.moves[2].toShort()
+                                    this.move4 = poke.moves[3].toShort()
+                                    this.targetType = poke.targetType!!.toByte()
+                                    this.gender = poke.gender!!.toByte()
+                                    this.position = poke.position!!
+                                    this.extra = poke.extra!!.toByte()
+                                    this.item = poke.item!!.toByte()
+                                    this.tag = poke.tag!!
                                 }
                             }
-                            2 -> pokemon!!.level = (poke["lvl"] as Int).toShort() // Level up
-                            3 -> pokemon!!.experience = poke["xp"] as Int // XP up
+                            2 -> pokemon!!.level = poke.level!!.toShort() // Level up
+                            3 -> pokemon!!.experience = poke.experience!! // XP up
                             4 -> { // Change moves
-                                pokemon!!.move1 = (poke["move1"] as Short)
-                                pokemon.move2 = (poke["move2"] as Short)
-                                pokemon.move3 = (poke["move3"] as Short)
-                                pokemon.move4 = (poke["move4"] as Short)
+                                pokemon!!.move1 = poke.moves!![0].toShort()
+                                pokemon.move2 = poke.moves[1].toShort()
+                                pokemon.move3 = poke.moves[2].toShort()
+                                pokemon.move4 = poke.moves[3].toShort()
                             }
-                            5 -> pokemon!!.item = poke["item"] as Byte // Change Item
-                            6, 10 -> pokemon!!.number = poke["num"] as Short // 6 = Evolve, 10 = Need Trade
+                            5 -> pokemon!!.item = poke.item!!.toByte() // Change Item
+                            6, 10 -> pokemon!!.number = poke.number!!.toShort() // 6 = Evolve, 10 = Need Trade
                             7 -> pokemon!!.nickname = nickname!! // Change Nickname
-                            8 -> pokemon!!.position = poke["pos"] as Int // Pos change
-                            9 -> pokemon!!.tag = poke["tag"] as String // Need Tag
+                            8 -> pokemon!!.position = poke.position!! // Pos change
+                            9 -> pokemon!!.tag = poke.tag!! // Need Tag
                         }
                     }
 
-                    val needSaveId = poke["needSaveID"]
+                    val needSaveId = poke.needSaveId
                     if (needSaveId !== null) {
-                        response.add("PID$needSaveId" to saveId.toString())
+                        response.add("PID$needSaveId" to poke.saveId.toString())
                     }
                 }
 
@@ -299,6 +304,14 @@ class PTD3SWFController {
 
         fun getSaves(user: User): SizedIterable<PTD3Save> {
             return getSaves(user.id.value)
+        }
+
+        fun getAvailableSaveId(save: PTD3Save): Int {
+            return transaction { (save.pokemons.maxByOrNull { pokemon -> pokemon.swfId }?.swfId ?: 0) + 1 }
+        }
+
+        fun decodePokeInfo(encoded: String, save: PTD3Save): ArrayList<Pokemon> {
+            return Obfuscation.decodePokeInfo(encoded, getAvailableSaveId(save))
         }
 
 
