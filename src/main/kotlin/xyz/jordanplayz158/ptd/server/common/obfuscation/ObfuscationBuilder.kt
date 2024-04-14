@@ -1,83 +1,44 @@
 package xyz.jordanplayz158.ptd.server.common.obfuscation
 
 
-// Can't extend ObfuscationBuilder
+// Can't extend StringBuilder
 class ObfuscationBuilder(private val builder: StringBuilder) {
     constructor(): this(StringBuilder())
 
-    fun append(str: String?): ObfuscationBuilder {
-        builder.append(str)
-        return this
-    }
+    fun append(str: String?) = apply { builder.append(str) }
     
-    fun append(s: CharSequence?): ObfuscationBuilder {
-        builder.append(s)
-        return this
-    }
+    fun append(s: CharSequence?) = apply { builder.append(s) }
 
     /**
      * @throws     IndexOutOfBoundsException {@inheritDoc}
      */
-    fun append(s: CharSequence?, start: Int, end: Int): ObfuscationBuilder {
-        builder.append(s, start, end)
-        return this
-    }
+    fun append(s: CharSequence?, start: Int, end: Int) = apply { builder.append(s, start, end) }
 
-    fun append(str: CharArray?): ObfuscationBuilder {
-        builder.append(str)
-        return this
-    }
+    fun append(str: CharArray?) = apply { builder.append(str) }
 
     /**
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
-    fun append(str: CharArray?, offset: Int, len: Int): ObfuscationBuilder {
-        builder.append(str, offset, len)
-        return this
-    }
+    fun append(str: CharArray?, offset: Int, len: Int) = apply { builder.append(str, offset, len) }
 
-    fun append(b: Boolean): ObfuscationBuilder {
-        builder.append(b)
-        return this
-    }
+    fun append(b: Boolean) = apply { builder.append(b) }
 
-    fun append(c: Char): ObfuscationBuilder {
-        builder.append(c)
-        return this
-    }
+    fun append(c: Char) = apply { builder.append(c) }
 
-    fun append(b: Byte): ObfuscationBuilder {
-        builder.append(b)
-        return this
-    }
+    fun append(b: Byte) = apply { builder.append(b) }
 
-    fun append(i: Int): ObfuscationBuilder {
-        builder.append(i)
-        return this
-    }
+    fun append(i: Int) = apply { builder.append(i) }
 
-    fun append(lng: Long): ObfuscationBuilder {
-        builder.append(lng)
-        return this
-    }
+    fun append(lng: Long) = apply { builder.append(lng) }
 
-    fun append(f: Float): ObfuscationBuilder {
-        builder.append(f)
-        return this
-    }
+    fun append(f: Float) = apply { builder.append(f) }
 
-    fun append(d: Double): ObfuscationBuilder {
-        builder.append(d)
-        return this
-    }
+    fun append(d: Double) = apply { builder.append(d) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun delete(start: Int, end: Int): ObfuscationBuilder {
-        builder.delete(start, end)
-        return this
-    }
+    fun delete(start: Int, end: Int) = apply { builder.delete(start, end) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
@@ -85,42 +46,27 @@ class ObfuscationBuilder(private val builder: StringBuilder) {
     fun insert(
         index: Int, str: CharArray?, offset: Int,
         len: Int
-    ): ObfuscationBuilder {
-        builder.insert(index, str, offset, len)
-        return this
-    }
+    ) = apply { builder.insert(index, str, offset, len) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, obj: Any?): ObfuscationBuilder {
-        builder.insert(offset, obj)
-        return this
-    }
+    fun insert(offset: Int, obj: Any?) = apply { builder.insert(offset, obj) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, str: String?): ObfuscationBuilder {
-        builder.insert(offset, str)
-        return this
-    }
+    fun insert(offset: Int, str: String?) = apply { builder.insert(offset, str) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, str: CharArray?): ObfuscationBuilder {
-        builder.insert(offset, str)
-        return this
-    }
+    fun insert(offset: Int, str: CharArray?) = apply { builder.insert(offset, str) }
 
     /**
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(dstOffset: Int, s: CharSequence?): ObfuscationBuilder {
-        builder.insert(dstOffset, s)
-        return this
-    }
+    fun insert(dstOffset: Int, s: CharSequence?) = apply { builder.insert(dstOffset, s) }
 
     /**
      * @throws IndexOutOfBoundsException {@inheritDoc}
@@ -128,66 +74,39 @@ class ObfuscationBuilder(private val builder: StringBuilder) {
     fun insert(
         dstOffset: Int, s: CharSequence?,
         start: Int, end: Int
-    ): ObfuscationBuilder {
-        builder.insert(dstOffset, s, start, end)
-        return this
-    }
+    ) = apply { builder.insert(dstOffset, s, start, end) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, b: Boolean): ObfuscationBuilder {
-        builder.insert(offset, b)
-        return this
-    }
+    fun insert(offset: Int, b: Boolean) = apply { builder.insert(offset, b) }
 
     /**
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, c: Char): ObfuscationBuilder {
-        builder.insert(offset, c)
-        return this
-    }
+    fun insert(offset: Int, c: Char) = apply { builder.insert(offset, c) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, i: Int): ObfuscationBuilder {
-        builder.insert(offset, i)
-        return this
-    }
+    fun insert(offset: Int, i: Int) = apply { builder.insert(offset, i) }
 
     /**
      * @throws StringIndexOutOfBoundsException {@inheritDoc}
      */
-    fun insert(offset: Int, l: Long): ObfuscationBuilder {
-        builder.insert(offset, l)
-        return this
-    }
+    fun insert(offset: Int, l: Long) = apply { builder.insert(offset, l) }
     
-    fun insert(offset: Int, f: Float): ObfuscationBuilder {
-        builder.insert(offset, f)
-        return this
-    }
+    fun insert(offset: Int, f: Float) = apply { builder.insert(offset, f) }
     
-    fun insert(offset: Int, d: Double): ObfuscationBuilder {
-        builder.insert(offset, d)
-        return this
-    }
+    fun insert(offset: Int, d: Double) = apply { builder.insert(offset, d) }
 
 
     // PTD specific functions
-    fun appendObfuscated(value: String): ObfuscationBuilder {
-        builder.append(Obfuscation.convertIntToString(value))
-        return this
-    }
+    fun appendObfuscated(value: String) = apply { builder.append(Obfuscation.convertIntToString(value)) }
 
-    fun appendObfuscated(value: Number): ObfuscationBuilder {
-        appendObfuscated(value.toLong().toString())
-        return this
-    }
+    fun appendObfuscated(value: Number) = apply { appendObfuscated(value.toLong().toString()) }
 
-    fun appendObfuscatedLength(value: String, variableLength: Boolean = false): ObfuscationBuilder {
+    fun appendObfuscatedLength(value: String, variableLength: Boolean = false) = apply {
         val valueLength = value.length
 
         if (variableLength) {
@@ -196,11 +115,10 @@ class ObfuscationBuilder(private val builder: StringBuilder) {
 
         appendObfuscated(valueLength)
         appendObfuscated(value)
-        return this
     }
 
-    fun appendObfuscatedLength(value: Number, variableLength: Boolean = false): ObfuscationBuilder {
-        return appendObfuscatedLength(value.toLong().toString(), variableLength)
+    fun appendObfuscatedLength(value: Number, variableLength: Boolean = false) = apply {
+        appendObfuscatedLength(value.toLong().toString(), variableLength)
     }
 
     fun length(): Int {
