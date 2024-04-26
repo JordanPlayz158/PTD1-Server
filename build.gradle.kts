@@ -151,8 +151,7 @@ dependencies {
 
     implementation("at.favre.lib:bcrypt:0.10.2")
 
-    implementation("org.xerial:sqlite-jdbc:3.44.1.0")
-    //implementation("org.xerial:sqlite-jdbc:3.45.0.0")
+    implementation("org.xerial:sqlite-jdbc:3.45.3.0")
     implementation("org.mariadb.jdbc:mariadb-java-client:3.3.3")
     implementation("com.mysql:mysql-connector-j:8.3.0")
     implementation("org.postgresql:postgresql:42.7.3")
