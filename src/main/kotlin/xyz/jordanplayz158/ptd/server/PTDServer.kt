@@ -8,6 +8,7 @@ import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
+import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.thymeleaf.*
@@ -34,6 +35,7 @@ import xyz.jordanplayz158.ptd.server.module.ptd2.ptd2
 import xyz.jordanplayz158.ptd.server.module.ptd3.ptd3
 import java.io.File
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 val dotenv = dotenv()
@@ -116,6 +118,20 @@ fun main() {
 
         routing {
             staticFiles("/", getCorrectFile("static", developmentMode))
+
+            get("/") { call.respond(ThymeleafContent("index", mapOf())) }
+
+            get("/flash") {
+                // Default invalid character
+                val game = call.parameters["game"] ?: "/"
+
+                val reasons = ArrayList<String>()
+                if (!game.matches("[A-z0-9-.]+".toRegex())) {
+                    reasons.add("Invalid 'game' query parameter")
+                }
+
+                call.respond(ThymeleafContent("flash", mapOf("reasons" to reasons, "game" to game)))
+            }
         }
 
         if (dotenv["ENABLE_PTD1", "false"].toBoolean()) {
