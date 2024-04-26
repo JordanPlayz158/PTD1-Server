@@ -147,7 +147,10 @@ dependencies {
     implementation("io.ktor:ktor-server-sessions:$ktor_version")
 
     implementation("io.ktor:ktor-server-webjars:$ktor_version")
-    implementation("org.webjars:bootstrap:5.3.3")
+    implementation("org.webjars.npm:bootstrap:5.3.3")
+    implementation("org.webjars.npm:bootstrap-icons:1.11.3")
+    implementation("org.webjars.npm:bootstrap5-toggle:5.0.6")
+    implementation("org.webjars:js-cookie:3.0.1")
 
     implementation("at.favre.lib:bcrypt:0.10.2")
 
