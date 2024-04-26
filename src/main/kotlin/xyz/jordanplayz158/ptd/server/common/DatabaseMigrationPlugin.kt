@@ -1,18 +1,24 @@
 package xyz.jordanplayz158.ptd.server.common
 
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.engine.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.thymeleaf.*
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import org.jetbrains.exposed.sql.transactions.transaction
 import xyz.jordanplayz158.ptd.server.common.orm.Setting
-import xyz.jordanplayz158.ptd.server.common.orm.Settings
 import xyz.jordanplayz158.ptd.server.dataSource
+import xyz.jordanplayz158.ptd.server.databaseServer
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.net.InetAddress
@@ -25,121 +31,144 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.set
 import kotlin.math.min
-import kotlin.system.exitProcess
 
-var isMigrating = false
-var migrationError: String? = null
-var totalRows: Int = 0
-var currentRow: Int = 0
-var cancelingMigration = false
+
+object InetAddressNullableSerializer : KSerializer<InetAddress?>,TypeAdapter<InetAddress?>() {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("InetAddress", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: InetAddress?) {
+        encoder.encodeString(value?.hostName ?: "")
+    }
+
+    override fun deserialize(decoder: Decoder): InetAddress? {
+        return isInetAddress(decoder.decodeString())
+    }
+
+    override fun write(p0: JsonWriter, p1: InetAddress?) {
+        p0.value(p1?.hostName ?: "")
+    }
+
+    override fun read(p0: JsonReader): InetAddress? {
+        return isInetAddress(p0.nextString())
+    }
+}
+
+@Serializable
+data class DatabaseMigration(
+    val isMigrating: Boolean = false,
+    @Serializable(with = InetAddressNullableSerializer::class)
+    val host: InetAddress?, // NotNull
+    val port: Int?, // Min(value = 1)
+    val name: String?, // NotBlank
+    val username: String?, // NotBlank
+    val password: String?, // NotBlank
+)
 
 val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDatabaseMigration") {
-    onCall { call ->
-        if(call.request.uri.startsWith("/assets"))
-            return@onCall
+    val logger = application.log
 
-        if(call.request.httpMethod === HttpMethod.Get) {
-            call.respond(ThymeleafContent("databaseMigration/index", mapOf()/*, csrfMapOf(call.sessions)*/))
-            return@onCall
+    fun migrationAsked() {
+        transaction {
+            Setting.new {
+                key = "DB_MIGRATION_ASKED"
+                value = "TRUE"
+            }
+        }
+    }
+
+    var migrationError = ""
+    var currentRow = 0
+    suspend fun progress(call: ApplicationCall) {
+        call.respondText(migrationError.ifEmpty { currentRow.toString() })
+    }
+
+    var isMigrating = false
+    var cancelingMigration: Boolean
+    var intercept = true // For first run, this is so you don't need to reload the server after migration
+    suspend fun cancel(call: ApplicationCall) {
+        if(isMigrating) {
+            logger.info("Migration canceling.")
+            cancelingMigration = true
+
+            return pageReasons(call, "Migration canceled.")
         }
 
-        if(call.request.httpMethod === HttpMethod.Post) {
-            val body = call.receiveParameters()
+        logger.info("Not migrating. Updating key 'DB_MIGRATION_ASKED' to 'TRUE'.")
 
-            if(body["progress"] !== null) {
-                if(migrationError !== null) {
-                    call.respondText(migrationError!!)
-                    return@onCall
-                }
+        migrationAsked()
 
-                call.respondText(currentRow.toString())
-                return@onCall
-            }
+        intercept = false
+        return call.respond(ThymeleafContent("redirect", mapOf("redirect" to "/")))
+    }
 
-            if(body["isMigrating"] === null) {
-                if(isMigrating) {
-                    call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf("Migration canceled."))))
-                    call.application.log.info("Migration canceling.")
-                    cancelingMigration = true
-                    return@onCall
-                }
+    var totalRows = 0
+    onCall { call ->
+        val url = call.request.uri
 
-                call.application.log.info("Not migrating. Updating key 'DB_MIGRATION_ASKED' to 'TRUE' and exiting. After restart the server should work.")
-                transaction {
-                    Setting.new {
-                        key = "DB_MIGRATION_ASKED"
-                        value = "TRUE"
-                    }
-                }
-                doShutdown(call, 0)
-                return@onCall
-            }
+        if(url.startsWith("/assets") || !intercept) return@onCall
+
+        val method = call.request.httpMethod
+
+        if(method === HttpMethod.Get) return@onCall if (url.endsWith("progress")) progress(call) else page(call)
+
+        if(method === HttpMethod.Post) {
+            val (dataIsMigrating, inetAddress, port, name, username, password) = call.receive<DatabaseMigration>()
+
+            if (!dataIsMigrating) return@onCall cancel(call)
 
             if(isMigrating) {
-                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf("Migration in progress!"))))
+                pageReasons(call, "Migration in progress!")
                 return@onCall
             }
 
-            call.application.log.info("Migrating...")
-            val host = body["host"]
-            val port = body["port"]
-            val name = body["name"]
-            val username = body["username"]
-            val password = body["password"]
-
+            val values = HashMap<String, String>()
             val reasons = ArrayList<String>()
 
-            if(!nullOrBlank(reasons, "host", host) && isInetAddress(host) != null)
-                reasons.add("'host' is not a valid IPv4 or IPv6 address!")
+            if(inetAddress === null) reasons.add("'host' is not a valid IPv4 or IPv6 address!") else values["host"] = inetAddress.hostName
 
-            if(!nullOrBlank(reasons, "port", port)) {
-                try {
-                    if(port?.toInt()!! <= 0)
-                        reasons.add("'port' is not a valid port, ports cannot be negative or zero!")
-                } catch (e: NumberFormatException) {
-                    reasons.add("'port' is not a valid integer!")
-                }
+            if (port === null) reasons.add("'port' is not a valid integer!") else {
+                if(port <= 0) reasons.add("'port' is not a valid port, ports cannot be negative or zero!") else values["port"] = "$port"
             }
 
-            nullOrBlank(reasons, "name", name)
-            nullOrBlank(reasons, "username", username)
-            nullOrBlank(reasons, "password", password)
+            if (name === null) reasons.add("'name' is blank!") else values["name"] = name
+            if (username === null) reasons.add("'username' is blank!") else values["username"] = username
+            if (password === null) reasons.add("'password' is blank!")
 
-
-            if(reasons.size > 0) {
-                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to reasons)))
+            if(reasons.isNotEmpty()) {
+                pageForm(call, values, *reasons.toTypedArray())
                 return@onCall
             }
+
+            val host = inetAddress!!.hostName
+
+            logger.info("Migrating...")
 
             cancelingMigration = false
             isMigrating = true
 
             var oldConn: Connection? = null
             try {
-                oldConn = DriverManager.getConnection("jdbc:mysql://$host:$port/$name", username, password)
+                oldConn = DriverManager.getConnection("jdbc:mariadb://$host:$port/$name", username, password)
 
                 val tables =
                     mutableMapOf("achievements" to 0, "pokemon" to 0, "saves" to 0, "save_items" to 0, "users" to 0)
                 for ((table, _) in tables) {
-                    val totalRowsStmt = oldConn.createStatement()
+                    oldConn.createStatement().use { stmt ->
+                        stmt.executeQuery("SELECT COUNT(*) FROM $table").use { rs ->
+                            rs.next()
+                            val numberOfRows = rs.getInt(1)
 
-                    val totalRowsRs = totalRowsStmt.executeQuery("SELECT COUNT(*) FROM $table")
-                    totalRowsRs.next()
-                    val numberOfRows = totalRowsRs.getInt(1)
-
-                    totalRows += numberOfRows
-                    tables[table] = numberOfRows
-
-                    totalRowsRs.close()
-                    totalRowsStmt.close()
+                            totalRows += numberOfRows
+                            tables[table] = numberOfRows
+                        }
+                    }
                 }
 
-                call.respond(ThymeleafContent("databaseMigration/index", mapOf("totalRows" to totalRows)))
-
+                pageForm(call, values, "totalRows" to totalRows)
 
                 Thread {
                     var newConn: Connection? = null
-                    var userId = 0L
+                    var oldUserId = 0L
                     var achievementId = 0L
                     var saveId = 0L
                     var saveItemsOffset = 0
@@ -148,274 +177,301 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
                         newConn = dataSource.connection
                         newConn.autoCommit = false
 
-                        val oldUsersStmt = oldConn.prepareStatement("SELECT * FROM users WHERE id >= ? ORDER BY id LIMIT 1000")
-                        val newUsersStmt = newConn.prepareStatement("INSERT INTO users(id, email, role_id, password, dex," +
-                                " shiny_dex, shadow_dex, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                        for (i in 0..tables["users"]!! step 1000) {
-                            if(cancelingMigration) {
-                                throw Exception("Migration canceled")
+                        val chunking = 1000
+                        oldConn.prepareStatement("SELECT * FROM users WHERE id >= ? ORDER BY id LIMIT $chunking")
+                            .use { oldStmt ->
+                                newConn.prepareStatement("INSERT INTO users(email, role_id, password) VALUES (?, ?, ?)")
+                                    .use { newStmt ->
+                                        newConn.prepareStatement(
+                                            "INSERT INTO ptd1_users(id, user_id, dex," +
+                                                    " shiny_dex, shadow_dex, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                        ).use { newPtd1Stmt ->
+                                            for (i in 0..tables["users"]!! step chunking) {
+                                                if (cancelingMigration) {
+                                                    throw Exception("Migration canceled")
+                                                }
+
+                                                oldStmt.setLong(1, oldUserId + 1)
+                                                oldStmt.executeQuery().use { rs ->
+                                                    while (rs.next()) {
+                                                        newStmt.setString(1, rs.getString("email"))
+
+                                                        val roleId = when (rs.getLong("role_id")) {
+                                                            2L -> 1L
+                                                            else -> 100L
+                                                        }
+
+                                                        newStmt.setLong(2, roleId)
+                                                        newStmt.setString(3, rs.getString("password"))
+                                                        newStmt.executeUpdate()
+
+                                                        oldUserId = rs.getLong("id")
+                                                        newPtd1Stmt.setLong(1, oldUserId)
+
+                                                        newStmt.generatedKeys.next()
+
+                                                        newPtd1Stmt.setLong(2, newStmt.generatedKeys.getLong(1))
+                                                        newPtd1Stmt.setString(3, rs.getString("dex") ?: "")
+                                                        newPtd1Stmt.setString(4, rs.getString("shinyDex") ?: "")
+                                                        newPtd1Stmt.setString(5, rs.getString("shadowDex") ?: "")
+                                                        newPtd1Stmt.setTimestamp(6, rs.getTimestamp("created_at"))
+                                                        newPtd1Stmt.setTimestamp(7, rs.getTimestamp("updated_at"))
+
+                                                        currentRow += newPtd1Stmt.executeUpdate()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                             }
 
-                            oldUsersStmt.setLong(1, userId + 1)
-                            val oldUsersRS = oldUsersStmt.executeQuery()
 
-                            while(oldUsersRS.next()) {
-                                val id = oldUsersRS.getLong("id")
-                                userId = id
-                                newUsersStmt.setLong(1, id)
-                                newUsersStmt.setString(2, oldUsersRS.getString("email"))
+                        oldConn.prepareStatement("SELECT * FROM achievements WHERE id >= ? ORDER BY id LIMIT $chunking")
+                            .use { oldStmt ->
+                                newConn.prepareStatement(
+                                    "INSERT INTO ptd1_achievements(id, user_id, shiny_hunter_rattata," +
+                                            " shiny_hunter_pidgey, shiny_hunter_geodude, shiny_hunter_zubat, star_wars, no_advantage, win_without_wind," +
+                                            " needs_more_candy, the_hard_way, pewter_challenge, cerulean_challenge, vermillion_challenge," +
+                                            " celadon_challenge, saffron_city_challenge, fuchsia_gym_challenge, cinnabar_gym_challenge," +
+                                            " viridian_city_challenge, created_at, updated_at)" +
+                                            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                ).use { newStmt ->
+                                    for (i in 0..tables["achievements"]!! step chunking) {
+                                        if (cancelingMigration) {
+                                            throw Exception("Migration canceled")
+                                        }
 
-                                val roleId = oldUsersRS.getLong("role_id")
-                                newUsersStmt.setLong(3, if(roleId != 0L) roleId else 1)
-                                newUsersStmt.setString(4, oldUsersRS.getString("password"))
+                                        oldStmt.setLong(1, achievementId + 1)
+                                        oldStmt.executeQuery().use { rs ->
+                                            while (rs.next()) {
+                                                val id = rs.getLong("id")
+                                                achievementId = id
+                                                newStmt.setLong(1, id)
+                                                newStmt.setLong(2, rs.getLong("user_id"))
 
-                                val dex = oldUsersRS.getString("dex")
-                                newUsersStmt.setString(5, if(dex !== null) dex else "")
+                                                val shinyHunter =
+                                                    rs.getString("one").trim().chunked(1).toMutableList()
+                                                while (shinyHunter.size < 4) {
+                                                    shinyHunter.add("0")
+                                                }
+                                                newStmt.setInt(3, shinyHunter[0].toInt())
+                                                newStmt.setInt(4, shinyHunter[1].toInt())
+                                                newStmt.setInt(5, shinyHunter[2].toInt())
+                                                newStmt.setInt(6, shinyHunter[3].toInt())
 
-                                val shinyDex = oldUsersRS.getString("shinyDex")
-                                newUsersStmt.setString(6, if(shinyDex !== null) shinyDex else "")
-
-                                val shadowDex = oldUsersRS.getString("shadowDex")
-                                newUsersStmt.setString(7, if(shadowDex !== null) shadowDex else "")
-                                newUsersStmt.setTimestamp(8, oldUsersRS.getTimestamp("created_at"))
-                                newUsersStmt.setTimestamp(9, oldUsersRS.getTimestamp("updated_at"))
-                                currentRow += newUsersStmt.executeUpdate()
-                            }
-                            oldUsersRS.close()
-                        }
-                        newUsersStmt.close()
-                        oldUsersStmt.close()
-
-                        val oldAchievementStmt = oldConn.prepareStatement("SELECT * FROM achievements WHERE id >= ? ORDER BY id LIMIT 1000")
-                        val newAchievementStmt = newConn.prepareStatement("INSERT INTO achievements(id, user_id, shiny_hunter_rattata," +
-                                " shiny_hunter_pidgey, shiny_hunter_geodude, shiny_hunter_zubat, star_wars, no_advantage, win_without_wind," +
-                                " needs_more_candy, the_hard_way, pewter_challenge, cerulean_challenge, vermillion_challenge," +
-                                " celadon_challenge, saffron_city_challenge, fuchsia_gym_challenge, cinnabar_gym_challenge," +
-                                " viridian_city_challenge, created_at, updated_at)" +
-                                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                        for (i in 0..tables["achievements"]!! step 1000) {
-                            if(cancelingMigration) {
-                                throw Exception("Migration canceled")
-                            }
-
-                            oldAchievementStmt.setLong(1, achievementId + 1)
-                            val oldAchievementRS = oldAchievementStmt.executeQuery()
-
-                            while(oldAchievementRS.next()) {
-                                val id = oldAchievementRS.getLong("id")
-                                achievementId = id
-                                newAchievementStmt.setLong(1, id)
-                                newAchievementStmt.setLong(2, oldAchievementRS.getLong("user_id"))
-
-                                val shinyHunter = oldAchievementRS.getString("one").trim().chunked(1).toMutableList()
-                                while(shinyHunter.size < 4) {
-                                    shinyHunter.add("0")
+                                                newStmt.setInt(7, rs.getInt("two"))
+                                                newStmt.setInt(8, rs.getInt("three"))
+                                                newStmt.setInt(9, rs.getInt("four"))
+                                                newStmt.setInt(10, rs.getInt("five"))
+                                                newStmt.setInt(11, rs.getInt("six"))
+                                                newStmt.setInt(12, rs.getInt("seven"))
+                                                newStmt.setInt(13, rs.getInt("eight"))
+                                                newStmt.setInt(14, rs.getInt("nine"))
+                                                newStmt.setInt(15, rs.getInt("ten"))
+                                                newStmt.setInt(16, rs.getInt("eleven"))
+                                                newStmt.setInt(17, rs.getInt("twelve"))
+                                                newStmt.setInt(18, rs.getInt("thirteen"))
+                                                newStmt.setInt(19, rs.getInt("fourteen"))
+                                                newStmt.setTimestamp(
+                                                    20,
+                                                    rs.getTimestamp("created_at")
+                                                        ?: Timestamp(Instant.now().epochSecond)
+                                                )
+                                                newStmt.setTimestamp(21, rs.getTimestamp("updated_at"))
+                                                currentRow += newStmt.executeUpdate()
+                                            }
+                                        }
+                                    }
                                 }
-                                newAchievementStmt.setInt(3, shinyHunter[0].toInt())
-                                newAchievementStmt.setInt(4, shinyHunter[1].toInt())
-                                newAchievementStmt.setInt(5, shinyHunter[2].toInt())
-                                newAchievementStmt.setInt(6, shinyHunter[3].toInt())
-
-                                newAchievementStmt.setInt(7, oldAchievementRS.getInt("two"))
-                                newAchievementStmt.setInt(8, oldAchievementRS.getInt("three"))
-                                newAchievementStmt.setInt(9, oldAchievementRS.getInt("four"))
-                                newAchievementStmt.setInt(10, oldAchievementRS.getInt("five"))
-                                newAchievementStmt.setInt(11, oldAchievementRS.getInt("six"))
-                                newAchievementStmt.setInt(12, oldAchievementRS.getInt("seven"))
-                                newAchievementStmt.setInt(13, oldAchievementRS.getInt("eight"))
-                                newAchievementStmt.setInt(14, oldAchievementRS.getInt("nine"))
-                                newAchievementStmt.setInt(15, oldAchievementRS.getInt("ten"))
-                                newAchievementStmt.setInt(16, oldAchievementRS.getInt("eleven"))
-                                newAchievementStmt.setInt(17, oldAchievementRS.getInt("twelve"))
-                                newAchievementStmt.setInt(18, oldAchievementRS.getInt("thirteen"))
-                                newAchievementStmt.setInt(19, oldAchievementRS.getInt("fourteen"))
-                                newAchievementStmt.setTimestamp(20, oldAchievementRS.getTimestamp("created_at"))
-                                newAchievementStmt.setTimestamp(21, oldAchievementRS.getTimestamp("updated_at"))
-                                currentRow += newAchievementStmt.executeUpdate()
                             }
-                            oldAchievementRS.close()
-                        }
-                        newAchievementStmt.close()
-                        oldAchievementStmt.close()
+
 
                         val savesPopulatedPerUser = HashMap<Long, ArrayList<Int>>()
-                        val oldSavesStmt = oldConn.prepareStatement("SELECT * FROM saves WHERE id >= ? ORDER BY id LIMIT 1000")
-                        val newSavesStmt = newConn.prepareStatement("INSERT INTO saves(id, user_id, number, levels_completed," +
-                                " levels_started, nickname, badges, avatar, has_flash, challenge, money, npc_trade, version, created_at, updated_at)" +
-                                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                        for (i in 0..tables["saves"]!! step 1000) {
-                            if(cancelingMigration) {
-                                throw Exception("Migration canceled.")
+                        oldConn.prepareStatement("SELECT * FROM saves WHERE id >= ? ORDER BY id LIMIT $chunking")
+                            .use { oldStmt ->
+                                newConn.prepareStatement(
+                                    "INSERT INTO ptd1_saves(id, user_id, number, levels_completed," +
+                                            " levels_started, nickname, badges, avatar, has_flash, challenge, money, npc_trade, version, created_at, updated_at)" +
+                                            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                ).use { newStmt ->
+                                    for (i in 0..tables["saves"]!! step chunking) {
+                                        if (cancelingMigration) {
+                                            throw Exception("Migration canceled.")
+                                        }
+
+                                        oldStmt.setLong(1, saveId + 1)
+                                        oldStmt.executeQuery().use { rs ->
+                                            while (rs.next()) {
+                                                val id = rs.getLong("id")
+                                                saveId = id
+                                                newStmt.setLong(1, id)
+
+                                                val oldUserId = rs.getLong("user_id")
+                                                newStmt.setLong(2, oldUserId)
+
+                                                val number = rs.getInt("num")
+                                                newStmt.setInt(3, number)
+
+                                                savesPopulatedPerUser.putIfAbsent(oldUserId, ArrayList())
+                                                savesPopulatedPerUser[oldUserId]?.add(number)
+
+                                                newStmt.setInt(4, rs.getInt("advanced"))
+                                                newStmt.setInt(5, rs.getInt("advanced_a"))
+
+                                                val nickname = rs.getString("nickname") ?: "Satoshi"
+                                                newStmt.setString(6, nickname.substring(0, min(8, nickname.length)))
+                                                newStmt.setInt(7, rs.getInt("badges"))
+                                                newStmt.setString(8, rs.getString("avatar") ?: "none")
+                                                newStmt.setInt(9, rs.getInt("classic"))
+                                                newStmt.setInt(10, rs.getInt("challenge"))
+                                                newStmt.setLong(11, rs.getLong("money"))
+                                                newStmt.setInt(12, rs.getInt("npcTrade"))
+                                                newStmt.setInt(13, rs.getInt("version"))
+                                                newStmt.setTimestamp(
+                                                    14,
+                                                    rs.getTimestamp("created_at")
+                                                        ?: Timestamp(Instant.now().epochSecond)
+                                                )
+                                                newStmt.setTimestamp(15, rs.getTimestamp("updated_at"))
+                                                currentRow += newStmt.executeUpdate()
+                                            }
+                                        }
+                                    }
+
+                                    savesPopulatedPerUser.filter { save -> save.value.size < 3 }.forEach { save ->
+                                        val numbers = arrayListOf(0, 1, 2)
+
+                                        save.value.forEach { usedNumber -> numbers.remove(usedNumber) }
+
+                                        numbers.forEach { number ->
+                                            newStmt.setLong(1, saveId++)
+                                            newStmt.setLong(2, save.key)
+                                            newStmt.setInt(3, number)
+                                            newStmt.setInt(4, 0)
+                                            newStmt.setInt(5, 0)
+
+                                            newStmt.setString(6, "Satoshi")
+                                            newStmt.setInt(7, 0)
+
+                                            newStmt.setString(8, "none")
+                                            newStmt.setInt(9, 0)
+                                            newStmt.setInt(10, 0)
+                                            newStmt.setLong(11, 50)
+                                            newStmt.setInt(12, 0)
+                                            newStmt.setInt(13, 1)
+                                            newStmt.setTimestamp(14, Timestamp(Instant.now().epochSecond))
+                                            newStmt.setTimestamp(15, null)
+                                        }
+                                    }
+                                }
                             }
 
-                            oldSavesStmt.setLong(1, saveId + 1)
-                            val oldSavesRS = oldSavesStmt.executeQuery()
+                        oldConn.prepareStatement(
+                            "SELECT save_id, item, COUNT(item) FROM save_items" +
+                                    " GROUP BY save_id, item ORDER BY save_id LIMIT $chunking OFFSET ?"
+                        ).use { oldStmt ->
+                            newConn.prepareStatement("INSERT INTO ptd1_save_items(save_id, item, quantity) VALUES (?, ?, ?)")
+                                .use { newStmt ->
+                                    for (i in 0..tables["save_items"]!! step chunking) {
+                                        if (cancelingMigration) {
+                                            throw Exception("Migration canceled")
+                                        }
 
-                            while(oldSavesRS.next()) {
-                                val id = oldSavesRS.getLong("id")
-                                saveId = id
-                                newSavesStmt.setLong(1, id)
-
-                                val oldUserId = oldSavesRS.getLong("user_id")
-                                newSavesStmt.setLong(2, oldUserId)
-
-                                val number = oldSavesRS.getInt("num")
-                                newSavesStmt.setInt(3, number)
-
-                                savesPopulatedPerUser.putIfAbsent(oldUserId, ArrayList())
-                                savesPopulatedPerUser[oldUserId]?.add(number)
-
-                                newSavesStmt.setInt(4, oldSavesRS.getInt("advanced"))
-                                newSavesStmt.setInt(5, oldSavesRS.getInt("advanced_a"))
-
-                                val nickname = oldSavesRS.getString("nickname")
-                                newSavesStmt.setString(6, if(nickname !== null && nickname.length <= 8) nickname else "Satoshi")
-                                newSavesStmt.setInt(7, oldSavesRS.getInt("badges"))
-
-                                val avatar = oldSavesRS.getString("avatar")
-                                newSavesStmt.setString(8, if(avatar !== null) avatar else "none")
-                                newSavesStmt.setInt(9, oldSavesRS.getInt("classic"))
-                                newSavesStmt.setInt(10, oldSavesRS.getInt("challenge"))
-                                newSavesStmt.setLong(11, oldSavesRS.getLong("money"))
-                                newSavesStmt.setInt(12, oldSavesRS.getInt("npcTrade"))
-                                newSavesStmt.setInt(13, oldSavesRS.getInt("version"))
-                                newSavesStmt.setTimestamp(14, oldSavesRS.getTimestamp("created_at"))
-                                newSavesStmt.setTimestamp(15, oldSavesRS.getTimestamp("updated_at"))
-                                currentRow += newSavesStmt.executeUpdate()
-                            }
-                            oldSavesRS.close()
+                                        saveItemsOffset = i
+                                        oldStmt.setInt(1, i)
+                                        oldStmt.executeQuery().use { rs ->
+                                            while (rs.next()) {
+                                                newStmt.setLong(1, rs.getLong("save_id"))
+                                                newStmt.setInt(2, rs.getInt("item"))
+                                                newStmt.setInt(3, min(255, rs.getInt("COUNT(item)")))
+                                                currentRow += newStmt.executeUpdate()
+                                            }
+                                        }
+                                    }
+                                }
                         }
 
-                        savesPopulatedPerUser.filter { save -> save.value.size < 3 }.forEach { save ->
-                            val numbers = arrayListOf(0, 1, 2)
+                        oldConn.prepareStatement("SELECT * FROM pokemon WHERE id >= ? ORDER BY id LIMIT $chunking")
+                            .use { oldStmt ->
+                                newConn.prepareStatement(
+                                    "INSERT INTO ptd1_pokemon(id, save_id, swf_id, number, nickname," +
+                                            " experience, level, move_1, move_2, move_3, move_4, move_selected, ability, target_type, tag, position," +
+                                            " rarity, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                                ).use { newStmt ->
+                                    for (i in 0..tables["pokemon"]!! step chunking) {
+                                        if (cancelingMigration) {
+                                            throw Exception("Migration canceled")
+                                        }
 
-                            save.value.forEach{usedNumber -> numbers.remove(usedNumber)}
+                                        oldStmt.setLong(1, pokemonId + 1)
+                                        oldStmt.executeQuery().use { rs ->
+                                            while (rs.next()) {
+                                                val id = rs.getLong("id")
+                                                pokemonId = id
+                                                newStmt.setLong(1, id)
+                                                newStmt.setLong(2, rs.getLong("save_id"))
+                                                newStmt.setInt(3, rs.getInt("pId"))
 
-                            numbers.forEach {number ->
-                                newSavesStmt.setLong(1, saveId++)
-                                newSavesStmt.setLong(2, save.key)
-                                newSavesStmt.setInt(3, number)
-                                newSavesStmt.setInt(4, 0)
-                                newSavesStmt.setInt(5, 0)
+                                                newStmt.setInt(4, min(65535, rs.getInt("pNum")))
 
-                                newSavesStmt.setString(6, "Satoshi")
-                                newSavesStmt.setInt(7, 0)
+                                                val nickname = rs.getString("nickname")
+                                                newStmt.setString(
+                                                    5,
+                                                    nickname.substring(0, min(30, nickname.length))
+                                                )
+                                                newStmt.setInt(6, rs.getInt("exp"))
+                                                newStmt.setInt(7, rs.getInt("lvl"))
+                                                newStmt.setInt(8, rs.getInt("m1"))
+                                                newStmt.setInt(9, rs.getInt("m2"))
+                                                newStmt.setInt(10, rs.getInt("m3"))
+                                                newStmt.setInt(11, rs.getInt("m4"))
+                                                newStmt.setInt(12, rs.getInt("mSel"))
+                                                newStmt.setInt(13, rs.getInt("ability"))
+                                                newStmt.setInt(14, rs.getInt("targetType"))
 
-                                newSavesStmt.setString(8, "none")
-                                newSavesStmt.setInt(9, 0)
-                                newSavesStmt.setInt(10, 0)
-                                newSavesStmt.setLong(11, 50)
-                                newSavesStmt.setInt(12, 0)
-                                newSavesStmt.setInt(13, 1)
-                                newSavesStmt.setTimestamp(14, Timestamp(Instant.now().epochSecond))
-                                newSavesStmt.setTimestamp(15, null)
+                                                val tag = rs.getString("tag") ?: "h"
+                                                newStmt.setString(15, tag)
+                                                newStmt.setInt(16, rs.getInt("pos"))
+                                                newStmt.setInt(17, rs.getInt("shiny"))
+                                                newStmt.setTimestamp(
+                                                    18,
+                                                    rs.getTimestamp("created_at")
+                                                        ?: Timestamp(Instant.now().epochSecond)
+                                                )
+                                                newStmt.setTimestamp(19, rs.getTimestamp("updated_at"))
+                                                currentRow += newStmt.executeUpdate()
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        }
-
-                        newSavesStmt.close()
-                        oldSavesStmt.close()
-
-                        val oldSaveItemsStmt = oldConn.prepareStatement("SELECT save_id, item, COUNT(item) FROM save_items" +
-                                " GROUP BY save_id, item ORDER BY save_id LIMIT 1000 OFFSET ?")
-                        val newSaveItemsStmt = newConn.prepareStatement("INSERT INTO save_items(save_id, item, count) VALUES (?, ?, ?)")
-                        for (i in 0..tables["save_items"]!! step 1000) {
-                            if(cancelingMigration) {
-                                throw Exception("Migration canceled")
-                            }
-
-                            saveItemsOffset = i
-                            oldSaveItemsStmt.setInt(1, i)
-                            val oldSaveItemsRS = oldSaveItemsStmt.executeQuery()
-
-                            while(oldSaveItemsRS.next()) {
-                                newSaveItemsStmt.setLong(1, oldSaveItemsRS.getLong("save_id"))
-                                newSaveItemsStmt.setInt(2, oldSaveItemsRS.getInt("item"))
-                                newSaveItemsStmt.setInt(3, min(255, oldSaveItemsRS.getInt("COUNT(item)")))
-                                currentRow += newSaveItemsStmt.executeUpdate()
-                            }
-                            oldSaveItemsRS.close()
-                        }
-                        newSaveItemsStmt.close()
-                        oldSaveItemsStmt.close()
-
-                        val oldPokemonStmt = oldConn.prepareStatement("SELECT * FROM pokemon WHERE id >= ? ORDER BY id LIMIT 1000")
-                        val newPokemonStmt = newConn.prepareStatement("INSERT INTO pokemon(id, save_id, swf_id, number, nickname," +
-                                " experience, level, move_1, move_2, move_3, move_4, move_selected, ability, target_type, tag, position," +
-                                " rarity, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                        for (i in 0..tables["pokemon"]!! step 1000) {
-                            if(cancelingMigration) {
-                                throw Exception("Migration canceled")
-                            }
-
-                            oldPokemonStmt.setLong(1, pokemonId + 1)
-                            val oldPokemonRS = oldPokemonStmt.executeQuery()
-
-                            while(oldPokemonRS.next()) {
-                                val id = oldPokemonRS.getLong("id")
-                                pokemonId = id
-                                newPokemonStmt.setLong(1, id)
-                                newPokemonStmt.setLong(2, oldPokemonRS.getLong("save_id"))
-                                newPokemonStmt.setInt(3, oldPokemonRS.getInt("pId"))
-
-                                newPokemonStmt.setInt(4, min(65535, oldPokemonRS.getInt("pNum")))
-
-                                val nickname = oldPokemonRS.getString("nickname")
-                                newPokemonStmt.setString(5, nickname.substring(0, min(30, nickname.length)))
-                                newPokemonStmt.setInt(6, oldPokemonRS.getInt("exp"))
-                                newPokemonStmt.setInt(7, oldPokemonRS.getInt("lvl"))
-                                newPokemonStmt.setInt(8, oldPokemonRS.getInt("m1"))
-                                newPokemonStmt.setInt(9, oldPokemonRS.getInt("m2"))
-                                newPokemonStmt.setInt(10, oldPokemonRS.getInt("m3"))
-                                newPokemonStmt.setInt(11, oldPokemonRS.getInt("m4"))
-                                newPokemonStmt.setInt(12, oldPokemonRS.getInt("mSel"))
-                                newPokemonStmt.setInt(13, oldPokemonRS.getInt("ability"))
-                                newPokemonStmt.setInt(14, oldPokemonRS.getInt("targetType"))
-
-                                val tag = oldPokemonRS.getString("tag")
-                                newPokemonStmt.setString(15, if(tag !== null) tag else "h")
-                                newPokemonStmt.setInt(16, oldPokemonRS.getInt("pos"))
-                                newPokemonStmt.setInt(17, oldPokemonRS.getInt("shiny"))
-                                newPokemonStmt.setTimestamp(18, oldPokemonRS.getTimestamp("created_at"))
-                                newPokemonStmt.setTimestamp(19, oldPokemonRS.getTimestamp("updated_at"))
-                                currentRow += newPokemonStmt.executeUpdate()
-                            }
-                            oldPokemonRS.close()
-                        }
-                        newPokemonStmt.close()
-                        oldPokemonStmt.close()
 
                         newConn.commit()
-                    } catch (e: Exception) {
-                        oldConn?.close()
-                        newConn?.rollback()
-                        newConn?.close()
 
-                        val rowProgress = "Last User ID: $userId, Total Rows in users: ${tables["users"]}\n" +
+                        currentRow = totalRows
+                        logger.info("Migration Successful!")
+                        migrationAsked()
+                        intercept = false
+                    } catch (e: Exception) {
+                        newConn?.rollback()
+
+                        val rowProgress = "Last User ID: $oldUserId, Total Rows in users: ${tables["users"]}\n" +
                                 "Last Achievement ID: $achievementId, Total Rows in achievements: ${tables["achievements"]}\n" +
                                 "Last Save ID: $saveId, Total Rows in saves: ${tables["saves"]}\n" +
                                 "Last Save_items OFFSET: $saveItemsOffset, Total Rows in save_items: ${tables["save_items"]}\n" +
                                 "Last Pokemon ID: $pokemonId, Total Rows in pokemon: ${tables["pokemon"]}\n"
 
-                        call.application.log.error(rowProgress)
-                        e.printStackTrace()
                         migrationError = rowProgress + stackTraceToString(e)
-                        isMigrating = false
-                        return@Thread
+                        logger.error(migrationError)
                     }
 
                     oldConn?.close()
                     newConn?.close()
-
-                    currentRow = totalRows
                     isMigrating = false
-                    call.application.log.info("Migration Successful! Manual Restart Required.")
-                    transaction {
-                        Setting.find(Settings.key eq "DB_MIGRATION_ASKED").first().value = "TRUE"
-                    }
                 }.start()
             } catch (e: Exception) {
                 oldConn?.close()
-                call.respond(ThymeleafContent("databaseMigration/index", mapOf("reasons" to listOf(stackTraceToString(e)))))
+                pageForm(call, values, stackTraceToString(e))
                 isMigrating = false
                 return@onCall
             }
@@ -423,13 +479,24 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
     }
 }
 
-fun nullOrBlank(reasons: ArrayList<String>, name: String, value: String?): Boolean {
-    if(value.isNullOrBlank()) {
-        reasons.add("'$name' is missing or blank!")
-        return true
-    }
+suspend fun page(call: ApplicationCall, map: Map<String, Any> = mapOf()) {
+    call.respond(ThymeleafContent("databaseMigration/index", map/*, csrfMapOf(call.sessions)*/))
+}
 
-    return false
+suspend fun page(call: ApplicationCall, vararg attributes: Pair<String, Any>) {
+    page(call, mapOf(*attributes))
+}
+
+suspend fun pageReasons(call: ApplicationCall, vararg reasons: String) {
+    page(call, "reasons" to reasons)
+}
+
+suspend fun pageForm(call: ApplicationCall, formValues: HashMap<String, String>, vararg attributes: Pair<String, Any>) {
+    page(call, *formValues.toList().toTypedArray(), *attributes)
+}
+
+suspend fun pageForm(call: ApplicationCall, formValues: HashMap<String, String>, vararg reasons: String) {
+    pageForm(call, formValues, "reasons" to reasons)
 }
 
 fun stackTraceToString(throwable: Throwable): String {
@@ -451,37 +518,5 @@ fun isInetAddress(address: String?) : InetAddress? {
         InetAddress.getByName(address)
     } catch (_: UnknownHostException) {
         null
-    }
-}
-
-
-// Grabbed from https://github.com/ktorio/ktor/blob/main/ktor-server/ktor-server-host-common/jvm/src/io/ktor/server/engine/ShutDownUrl.kt
-//   to see how proper shutdown was done
-/**
- * Shuts down an application using the specified [call].
- */
-suspend fun doShutdown(call: ApplicationCall, exitCode: Int) {
-    call.application.log.warn("doShutdown was called: server is going down")
-    val application = call.application
-    val environment = application.environment
-
-    val latch = CompletableDeferred<Nothing>()
-    call.application.launch {
-        latch.join()
-
-        environment.monitor.raise(ApplicationStopPreparing, environment)
-        if (environment is ApplicationEngineEnvironment) {
-            environment.stop()
-        } else {
-            application.dispose()
-        }
-
-        exitProcess(exitCode)
-    }
-
-    try {
-        call.respond(HttpStatusCode.Gone)
-    } finally {
-        latch.cancel()
     }
 }
