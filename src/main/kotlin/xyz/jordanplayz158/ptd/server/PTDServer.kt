@@ -42,14 +42,13 @@ import kotlin.collections.ArrayList
 import kotlin.concurrent.thread
 
 val dotenv = dotenv()
-lateinit var dataSource: HikariDataSource
+val dataSource = HikariDataSource(databaseConfig(dotenv))
+val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
 
 fun main() {
     // `db`, `static`, `templates`, `.env` will be shipped in a zip, no need to copy at runtime
+    //  also allows graalvm to work
     //copyResourceToFileSystem(".env", File(".env"))
-
-    dataSource = HikariDataSource(databaseConfig(dotenv))
-    val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
 
     embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
         val sentryUrl = dotenv["SENTRY_URL"]
