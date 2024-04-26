@@ -1,9 +1,9 @@
 <html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{base.layout}">
 <head>
-    <title th:text="|Redirect - @{redirect}|"></title>
+    <title th:text="|Redirect - @{${redirect}}|"></title>
 </head>
 <div layout:fragment="content" th:classappend="'d-flex align-items-center position-absolute top-0 bottom-0 start-0 end-0'">
-    <h1 class="w-100" th:text="|Redirecting you to @{redirect} in 5 seconds...|"></h1>
+    <h1 class="w-100" th:text="|Redirecting you to @{${redirect}} in 5 seconds...|"></h1>
 </div>
 </html>

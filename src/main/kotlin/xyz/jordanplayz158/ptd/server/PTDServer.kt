@@ -73,7 +73,7 @@ fun main() {
         }
 
         install(Webjars) {
-            path = "assets"
+            path = "assets/webjars"
         }
 
         install(Sessions) {
@@ -83,56 +83,23 @@ fun main() {
         install(Thymeleaf) {
             addDialect(LayoutDialect())
 
-            setLinkBuilder(
-//                object : ILinkBuilder {
-//                    override fun getName(): String {
-//                        return "dynamicLinks"
-//                    }
-//
-//                    override fun getOrder(): Int {
-//                        return 100
-//                    }
-//
-//                    override fun buildLink(
-//                        context: IExpressionContext?,
-//                        base: String?,
-//                        parameters: MutableMap<String, Any>?
-//                    ): String {
-//                        println()
-//                        println("Context: $context")
-//                        println("Base: $base")
-//                        println("Parameters: $parameters")
-//                        println()
-//
-//                        if (context is IWebContext) {
-//                            return s
-//                        }
-//
-//                        return ""
-//                    }
-//                }
-
-                object : StandardLinkBuilder() {
-                    override fun computeContextPath(
-                        context: IExpressionContext?,
-                        base: String?,
-                        parameters: MutableMap<String, Any>?
-                    ): String {
-                        println()
-                        println("Context: $context")
-                        println("Base: $base")
-                        println("Parameters: $parameters")
-                        println()
-
-                        if (context is IWebContext) {
-                            return super.computeContextPath(context, base, parameters)
-
-                        }
-
-                        return "static"
+            setLinkBuilder(object : StandardLinkBuilder() {
+                override fun computeContextPath(
+                    context: IExpressionContext?,
+                    base: String?,
+                    parameters: MutableMap<String, Any>?
+                ): String {
+                    if (context is IWebContext) {
+                        return super.computeContextPath(context, base, parameters)
                     }
+
+                    if (base != null && base.startsWith("/webjars/")) {
+                        return "/assets"
+                    }
+
+                    return ""
                 }
-            )
+            })
 
             setTemplateResolver((if (developmentMode) {
                 ClassLoaderTemplateResolver().apply {
