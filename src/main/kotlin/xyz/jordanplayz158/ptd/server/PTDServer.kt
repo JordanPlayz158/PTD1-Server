@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.cdimascio.dotenv.Dotenv
 import io.github.cdimascio.dotenv.dotenv
+import io.ktor.http.ContentType
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -26,6 +27,7 @@ import org.thymeleaf.linkbuilder.StandardLinkBuilder
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
 import org.thymeleaf.templateresolver.FileTemplateResolver
 import xyz.jordanplayz158.ptd.server.common.FirstRunDatabaseMigrationPlugin
+import xyz.jordanplayz158.ptd.server.common.data.CustomFormUrlEncodedConverter
 import xyz.jordanplayz158.ptd.server.common.orm.Setting
 import xyz.jordanplayz158.ptd.server.common.orm.Settings
 import xyz.jordanplayz158.ptd.server.common.session.SQLSessionStorage
@@ -66,6 +68,12 @@ fun main() {
 
         val database = Database.connect(dataSource)
 
+        install(ContentNegotiation) {
+            register(ContentType.Application.FormUrlEncoded, CustomFormUrlEncodedConverter())
+        }
+
+        // TODO: Need to ensure only first migration is run if DB_MIGRATION_ASKED is not yes so schema will be correct for
+        //  migrating if the user wishes to migrate, currently it will just go through all the migrations in the directory
         // For the "first run" (if the user hasn't answered yes or no) of this server
         //   We will display 1 page for all routes to migrate old DB data if requested.
         transaction {

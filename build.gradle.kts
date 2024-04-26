@@ -141,6 +141,8 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:1.5.3")
 
+    implementation("com.google.code.gson:gson:2.10.1")
+
     implementation("io.ktor:ktor-server-cio:$ktor_version")
     implementation("io.ktor:ktor-server-thymeleaf:$ktor_version")
     implementation("nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:3.3.0")
