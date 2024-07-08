@@ -137,6 +137,8 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
+    implementation("com.github.ajalt.clikt:clikt:4.4.0")
+
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 
     implementation("ch.qos.logback:logback-classic:1.5.3")
