@@ -58,15 +58,6 @@ class PTDServer : CliktCommand() {
         //  also allows graalvm to work
         //copyResourceToFileSystem(".env", File(".env"))
 
-    embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
-        val sentryUrl = dotenv["SENTRY_URL"]
-        if (sentryUrl !== null) {
-            install(KtorSentry) {
-                dsn = sentryUrl
-                tracesSampleRate = dotenv["SENTRY_SAMPLE_RATE", "1.0"].toDouble()
-                isDebug = dotenv["SENTRY_DEBUG", "false"].toBoolean()
-            }
-        }
         embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
             val sentryUrl = dotenv["SENTRY_URL"]
             if (sentryUrl !== null) {
@@ -190,13 +181,6 @@ class PTDServer : CliktCommand() {
                 ptd3()
             }
 
-        Runtime.getRuntime().addShutdownHook(thread(start = false) {
-            println("Shutdown signal received. Exiting...")
-            TransactionManager.closeAndUnregister(database)
-            dataSource.close()
-        })
-    }.start(wait = true)
-}
             Runtime.getRuntime().addShutdownHook(thread(start = false) {
                 println("Shutdown signal received. Exiting...")
                 TransactionManager.closeAndUnregister(database)
