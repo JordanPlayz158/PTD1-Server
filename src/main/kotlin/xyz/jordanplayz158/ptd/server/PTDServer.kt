@@ -1,5 +1,10 @@
 package xyz.jordanplayz158.ptd.server
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.boolean
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.cdimascio.dotenv.Dotenv
@@ -45,10 +50,13 @@ val dotenv = dotenv()
 val dataSource = HikariDataSource(databaseConfig(dotenv))
 val databaseServer = dataSource.connection.metaData.databaseProductName.lowercase(Locale.ENGLISH)
 
-fun main() {
-    // `db`, `static`, `templates`, `.env` will be shipped in a zip, no need to copy at runtime
-    //  also allows graalvm to work
-    //copyResourceToFileSystem(".env", File(".env"))
+class PTDServer : CliktCommand() {
+    private val dbMigration: Boolean by option().boolean().default(true).help("Whether you will be migrating an existing db")
+
+    override fun run() {
+        // `db`, `static`, `templates`, `.env` will be shipped in a zip, no need to copy at runtime
+        //  also allows graalvm to work
+        //copyResourceToFileSystem(".env", File(".env"))
 
     embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
         val sentryUrl = dotenv["SENTRY_URL"]
@@ -59,112 +67,128 @@ fun main() {
                 isDebug = dotenv["SENTRY_DEBUG", "false"].toBoolean()
             }
         }
-
-        SQLMigration(
-            dataSource.connection,
-            getCorrectFile("db/migration/ptd/$databaseServer", developmentMode)
-        )
-
-        val database = Database.connect(dataSource)
-
-        install(ContentNegotiation) {
-            register(ContentType.Application.FormUrlEncoded, CustomFormUrlEncodedConverter())
-        }
-
-        // TODO: Need to ensure only first migration is run if DB_MIGRATION_ASKED is not yes so schema will be correct for
-        //  migrating if the user wishes to migrate, currently it will just go through all the migrations in the directory
-        // For the "first run" (if the user hasn't answered yes or no) of this server
-        //   We will display 1 page for all routes to migrate old DB data if requested.
-        transaction {
-            val dbMigrationAsked = Setting.find(Settings.key eq "DB_MIGRATION_ASKED").firstOrNull()
-            if (dbMigrationAsked === null) {
-                install(FirstRunDatabaseMigrationPlugin)
+        embeddedServer(CIO, port = dotenv["PORT", "8080"].toInt()) {
+            val sentryUrl = dotenv["SENTRY_URL"]
+            if (sentryUrl !== null) {
+                install(KtorSentry) {
+                    dsn = sentryUrl
+                    tracesSampleRate = dotenv["SENTRY_SAMPLE_RATE", "1.0"].toDouble()
+                    isDebug = dotenv["SENTRY_DEBUG", "false"].toBoolean()
+                }
             }
-        }
 
-        install(Webjars) {
-            path = "assets/webjars"
-        }
+            SQLMigration(
+                dataSource.connection,
+                getCorrectFile("db/migration/ptd/$databaseServer", developmentMode)
+            )
 
-        install(Sessions) {
-            cookie<UserSession>("ptd1_session", SQLSessionStorage())
-        }
+            val database = Database.connect(dataSource)
 
-        install(Thymeleaf) {
-            addDialect(LayoutDialect())
+            install(ContentNegotiation) {
+                register(ContentType.Application.FormUrlEncoded, CustomFormUrlEncodedConverter())
+            }
 
-            setLinkBuilder(object : StandardLinkBuilder() {
-                override fun computeContextPath(
-                    context: IExpressionContext?,
-                    base: String?,
-                    parameters: MutableMap<String, Any>?
-                ): String {
-                    if (context is IWebContext) {
-                        return super.computeContextPath(context, base, parameters)
+            // TODO: Need to ensure only first migration is run if DB_MIGRATION_ASKED is not yes so schema will be correct for
+            //  migrating if the user wishes to migrate, currently it will just go through all the migrations in the directory
+            // For the "first run" (if the user hasn't answered yes or no) of this server
+            //   We will display 1 page for all routes to migrate old DB data if requested.
+            transaction {
+                if (Setting.find(Settings.key eq "DB_MIGRATION_ASKED").firstOrNull() === null) {
+                    if (!dbMigration) {
+                        Setting.new {
+                            key = "DB_MIGRATION_ASKED"
+                            value = "TRUE"
+                        }
+                    } else {
+                        install(FirstRunDatabaseMigrationPlugin)
+                    }
+                }
+            }
+
+            install(Webjars) {
+                path = "assets/webjars"
+            }
+
+            install(Sessions) {
+                cookie<UserSession>("ptd1_session", SQLSessionStorage())
+            }
+
+            install(Thymeleaf) {
+                addDialect(LayoutDialect())
+
+                setLinkBuilder(object : StandardLinkBuilder() {
+                    override fun computeContextPath(
+                        context: IExpressionContext?,
+                        base: String?,
+                        parameters: MutableMap<String, Any>?
+                    ): String {
+                        if (context is IWebContext) {
+                            return super.computeContextPath(context, base, parameters)
+                        }
+
+                        if (base != null && base.startsWith("/webjars/")) {
+                            return "/assets"
+                        }
+
+                        return ""
+                    }
+                })
+
+                setTemplateResolver((if (developmentMode) {
+                    ClassLoaderTemplateResolver().apply {
+                        cacheManager = null
+                    }
+                } else {
+                    FileTemplateResolver()
+                }).apply {
+                    prefix = "templates/"
+                    suffix = ".html"
+                    characterEncoding = "utf-8"
+                })
+            }
+
+            routing {
+                // TODO: Add page to merge PTD1 and PTD2 accounts into 1 entry
+                staticFiles("/", getCorrectFile("static", developmentMode))
+
+                get("/") { call.respond(ThymeleafContent("index", mapOf())) }
+
+                get("/flash") {
+                    // Default invalid character
+                    val game = call.parameters["game"] ?: "/"
+
+                    val reasons = ArrayList<String>()
+                    if (!game.matches("[A-z0-9-.]+".toRegex())) {
+                        reasons.add("Invalid 'game' query parameter")
                     }
 
-                    if (base != null && base.startsWith("/webjars/")) {
-                        return "/assets"
-                    }
-
-                    return ""
+                    call.respond(ThymeleafContent("flash", mapOf("reasons" to reasons, "game" to game)))
                 }
-            })
-
-            setTemplateResolver((if (developmentMode) {
-                ClassLoaderTemplateResolver().apply {
-                    cacheManager = null
-                }
-            } else {
-                FileTemplateResolver()
-            }).apply {
-                prefix = "templates/"
-                suffix = ".html"
-                characterEncoding = "utf-8"
-            })
-        }
-
-        routing {
-            staticFiles("/", getCorrectFile("static", developmentMode))
-
-            get("/") { call.respond(ThymeleafContent("index", mapOf())) }
-
-            get("/flash") {
-                // Default invalid character
-                val game = call.parameters["game"] ?: "/"
-
-                val reasons = ArrayList<String>()
-                if (!game.matches("[A-z0-9-.]+".toRegex())) {
-                    reasons.add("Invalid 'game' query parameter")
-                }
-
-                call.respond(ThymeleafContent("flash", mapOf("reasons" to reasons, "game" to game)))
             }
-        }
 
-        if (dotenv["ENABLE_PTD1", "false"].toBoolean()) {
-            SQLMigration(
-                dataSource.connection,
-                getCorrectFile("db/migration/ptd1/$databaseServer", developmentMode)
-            )
-            ptd1()
-        }
+            if (dotenv["ENABLE_PTD1", "false"].toBoolean()) {
+                SQLMigration(
+                    dataSource.connection,
+                    getCorrectFile("db/migration/ptd1/$databaseServer", developmentMode)
+                )
+                ptd1()
+            }
 
-        if (dotenv["ENABLE_PTD2", "false"].toBoolean()) {
-            SQLMigration(
-                dataSource.connection,
-                getCorrectFile("db/migration/ptd2/$databaseServer", developmentMode)
-            )
-            ptd2()
-        }
+            if (dotenv["ENABLE_PTD2", "false"].toBoolean()) {
+                SQLMigration(
+                    dataSource.connection,
+                    getCorrectFile("db/migration/ptd2/$databaseServer", developmentMode)
+                )
+                ptd2()
+            }
 
-        if (dotenv["ENABLE_PTD3", "false"].toBoolean()) {
-            SQLMigration(
-                dataSource.connection,
-                getCorrectFile("db/migration/ptd3/$databaseServer", developmentMode)
-            )
-            ptd3()
-        }
+            if (dotenv["ENABLE_PTD3", "false"].toBoolean()) {
+                SQLMigration(
+                    dataSource.connection,
+                    getCorrectFile("db/migration/ptd3/$databaseServer", developmentMode)
+                )
+                ptd3()
+            }
 
         Runtime.getRuntime().addShutdownHook(thread(start = false) {
             println("Shutdown signal received. Exiting...")
@@ -173,6 +197,16 @@ fun main() {
         })
     }.start(wait = true)
 }
+            Runtime.getRuntime().addShutdownHook(thread(start = false) {
+                println("Shutdown signal received. Exiting...")
+                TransactionManager.closeAndUnregister(database)
+                dataSource.close()
+            })
+        }.start(wait = true)
+    }
+}
+
+fun main(args: Array<String>) = PTDServer().main(args)
 
 fun databaseConfig(dotenv: Dotenv) : HikariConfig {
     val config = HikariConfig()
