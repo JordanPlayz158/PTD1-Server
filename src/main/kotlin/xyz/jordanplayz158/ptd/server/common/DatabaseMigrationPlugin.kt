@@ -1084,7 +1084,7 @@ val FirstRunDatabaseMigrationPlugin = createApplicationPlugin(name = "FirstRunDa
 }
 
 suspend fun page(call: ApplicationCall, map: Map<String, Any> = mapOf()) {
-    call.respond(ThymeleafContent("databaseMigration/2column", map/*, csrfMapOf(call.sessions)*/))
+    call.respond(ThymeleafContent("databaseMigration/index", map/*, csrfMapOf(call.sessions)*/))
 }
 
 suspend fun page(call: ApplicationCall, vararg attributes: Pair<String, Any>) {

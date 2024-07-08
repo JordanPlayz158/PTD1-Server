@@ -4,13 +4,18 @@
     <title>Database Migration?</title>
     <script>
         window.addEventListener('load', function () {
-            const databaseDetailsStyle = document.getElementById('databaseDetails').style
+            const migrationQuestion1 = document.getElementById("dbMigrationQuestion1")
+            if (migrationQuestion1) {
+                function onQuestionToggle(e) {
+                    const input = e.target
+                    const id = input.id
+                    document.getElementById('databaseDetails' + id.charAt(id.length - 1)).style.setProperty('display',
+                        input.checked ? 'flex' : 'none',
+                        'important')
+                }
 
-            document.getElementById("dbMigrationQuestion").onchange = onQuestionToggle
-            function onQuestionToggle(e) {
-                databaseDetailsStyle.setProperty('display',
-                    e.target.checked ? 'flex' : 'none',
-                    'important')
+                migrationQuestion1.onchange = onQuestionToggle
+                document.getElementById("dbMigrationQuestion2").onchange = onQuestionToggle
             }
 
             const totalRowsElement = document.getElementById('totalRows')
@@ -85,41 +90,71 @@
                     <div id="migrationProgress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0"></div>
                 </div>
             </div>
-            <div id="databaseDetails"></div>
         </div>
-        <div th:unless="${totalRows}">
-            <div class="mb-3">
-                <label for="dbMigrationQuestion" class="form-label">Do you wish to migrate an old Pokemon Tower Defense 1 (PTD1) Database?</label>
-                <div class="form-text mb-2">This only applies to databases that have the latest laravel-10 database schema!</div>
-                <input type="checkbox" class="form-control" id="dbMigrationQuestion" name="isMigrating" data-size="lg" data-toggle="toggle" data-onlabel="Yes" data-offlabel="No" data-onstyle="success" data-offstyle="danger" autocomplete="off" checked>
+        <div class="row" th:unless="${totalRows}">
+            <div class="col">
+                <div class="mb-3">
+                    <label for="dbMigrationQuestion1" class="form-label">Do you wish to migrate an old Pokemon Tower Defense 1 (PTD1) Database?</label>
+                    <div class="form-text mb-2">This only applies to databases that have the latest laravel-10 database schema!</div>
+                    <input type="checkbox" class="form-control" id="dbMigrationQuestion1" name="isMigrating1" data-size="lg" data-toggle="toggle" data-onlabel="Yes" data-offlabel="No" data-onstyle="success" data-offstyle="danger" autocomplete="off" checked>
+                </div>
+                <div id="databaseDetails1" class="d-flex flex-column align-items-center">
+                    <div class="mb-3">
+                        <label for="databaseHost1" class="form-label">Host</label>
+                        <input type="text" class="w-auto form-control text-center" id="databaseHost1" name="host1" size="45" th:value="${host1} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databasePort1" class="form-label">Port</label>
+                        <input type="text" class="w-auto form-control text-center" id="databasePort1" name="port1" size="5" maxlength="5" th:value="${port1} ?: 3306"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databaseName1" class="form-label">Name</label>
+                        <input type="text" class="form-control text-center" id="databaseName1" name="name1" th:value="${name1} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databaseUsername1" class="form-label">Username</label>
+                        <input type="text" class="form-control text-center" id="databaseUsername1" name="username1" th:value="${username1} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databasePassword1" class="form-label">Password</label>
+                        <input type="password" class="form-control text-center" id="databasePassword1" name="password1"/>
+                    </div>
+                </div>
             </div>
-            <div id="databaseDetails" class="d-flex flex-column align-items-center">
+            <div class="col">
                 <div class="mb-3">
-                    <label for="databaseHost" class="form-label">Host</label>
-                    <input type="text" class="w-auto form-control text-center" id="databaseHost" name="host" size="45" th:value="${host} ?: ''"/>
+                    <label for="dbMigrationQuestion2" class="form-label">Do you wish to migrate an old Pokemon Tower Defense 2 (PTD2) Database?</label>
+                    <div class="form-text mb-2">This only applies to PTD2 databases using the MySQL storage backend!</div>
+                    <input type="checkbox" class="form-control" id="dbMigrationQuestion2" name="isMigrating2" data-size="lg" data-toggle="toggle" data-onlabel="Yes" data-offlabel="No" data-onstyle="success" data-offstyle="danger" autocomplete="off" checked>
                 </div>
-                <div class="mb-3">
-                    <label for="databasePort" class="form-label">Port</label>
-                    <input type="text" class="w-auto form-control text-center" id="databasePort" name="port" size="5" maxlength="5" th:value="${port} ?: 3306"/>
-                </div>
-                <div class="mb-3">
-                    <label for="databaseName" class="form-label">Name</label>
-                    <input type="text" class="form-control text-center" id="databaseName" name="name" th:value="${name} ?: ''"/>
-                </div>
-                <div class="mb-3">
-                    <label for="databaseUsername" class="form-label">Username</label>
-                    <input type="text" class="form-control text-center" id="databaseUsername" name="username" th:value="${username} ?: ''"/>
-                </div>
-                <div class="mb-3">
-                    <label for="databasePassword" class="form-label">Password</label>
-                    <input type="password" class="form-control text-center" id="databasePassword" name="password"/>
+                <div id="databaseDetails2" class="d-flex flex-column align-items-center">
+                    <div class="mb-3">
+                        <label for="databaseHost2" class="form-label">Host</label>
+                        <input type="text" class="w-auto form-control text-center" id="databaseHost2" name="host2" size="45" th:value="${host2} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databasePort2" class="form-label">Port</label>
+                        <input type="text" class="w-auto form-control text-center" id="databasePort2" name="port2" size="5" maxlength="5" th:value="${port2} ?: 3306"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databaseName2" class="form-label">Name</label>
+                        <input type="text" class="form-control text-center" id="databaseName2" name="name2" th:value="${name2} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databaseUsername2" class="form-label">Username</label>
+                        <input type="text" class="form-control text-center" id="databaseUsername2" name="username2" th:value="${username2} ?: ''"/>
+                    </div>
+                    <div class="mb-3">
+                        <label for="databasePassword2" class="form-label">Password</label>
+                        <input type="password" class="form-control text-center" id="databasePassword2" name="password2"/>
+                    </div>
                 </div>
             </div>
         </div>
 
-<!--        <input type="hidden"-->
-<!--               th:name="${_csrf.parameterName}"-->
-<!--               th:value="${_csrf.token}" />-->
+        <!--        <input type="hidden"-->
+        <!--               th:name="${_csrf.parameterName}"-->
+        <!--               th:value="${_csrf.token}" />-->
         <button type="submit" class="btn btn-primary">Submit</button>
     </form>
 </div>
