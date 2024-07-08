@@ -63,3 +63,5 @@ suspend fun ApplicationCall.respondUrlEncodedForm(response: List<Pair<String, St
 suspend fun ApplicationCall.respondUrlEncodedForm(response: ReasonsEnum) {
     respondUrlEncodedForm(response.fullReason())
 }
+
+fun Boolean.toInt() = if (this) 1 else 0

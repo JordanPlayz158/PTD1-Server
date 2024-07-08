@@ -60,17 +60,17 @@ class PTD1SWFController {
                     response.add("Nickname$number" to save.nickname)
                     response.add("Badges$number" to save.badges.toString())
                     response.add("avatar$number" to save.avatar)
-                    response.add("Classic$number" to save.hasFlash.toString())
+                    response.add("Classic$number" to save.hasFlash.toInt().toString())
                     response.add("Classic${number}_a" to "")
                     response.add("Challenge$number" to save.challenge.toString())
                     response.add("Money$number" to save.money.toString())
-                    response.add("NPCTrade$number" to save.npcTrade.toString())
-                    response.add("Version$number" to save.version.toString())
+                    response.add("NPCTrade$number" to save.npcTrade.toInt().toString())
+                    response.add("Version$number" to save.version.id.toString())
 
                     var i = 1
                     save.items.forEach {item ->
                         for (quantity in 0..item.quantity) {
-                            response.add("p${number}_item_${i}_num" to item.item.toString())
+                            response.add("p${number}_item_${i}_num" to item.item.id.toString())
                             i++
                         }
                     }
