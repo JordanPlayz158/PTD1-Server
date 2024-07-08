@@ -136,16 +136,6 @@ class EtrottaTest {
         return old to new
     }
 
-    /*
-    // Some endpoints KGM doesn't check if password is correct
-    //  Only for non-destructive actions though like loading
-    //  but this is one place where my logic will diverge from KGM's
-    @Test
-    fun loadStoryWrongPassword() {
-        createAccount("testLoadStoryWrongPassword", "wrongpassword")
-        loadStory("testLoadStoryWrongPassword")
-    }*/
-
 //    @Test
 //    fun loadStoryEmpty() {
 //        // Etrotta's response has extra data than necessary
@@ -180,12 +170,6 @@ class EtrottaTest {
         loadStory("testLoadStoryFullyPopulated")
     }
 
-    // KGM's has an error so testing against it.... doesn't really make sense
-//    @Test
-//    fun loadStoryProfileEmpty() {
-//        loadStoryProfile("test", 1)
-//    }
-
     @Test
     fun loadStoryProfilePopulated() {
         createAccount("testLoadStoryProfilePopulated")
@@ -212,16 +196,12 @@ class EtrottaTest {
 
     @Test
     fun saveStoryFresh() {
-        // Destructive things should have independent profiles
-        // Even though so long as both do the same things, should be fine
         createAccount("testSaveStory")
         saveStory("testSaveStory", 1)
     }
 
     @Test
     fun saveStoryOverwriteExisting() {
-        // Destructive things should have independent profiles
-        // Even though so long as both do the same things, should be fine
         createAccount("testSaveStory")
 
         saveStory("testSaveStory", 1)
